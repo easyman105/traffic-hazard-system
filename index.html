@@ -120,6 +120,20 @@ tr:hover td{background:#fafafe}
 .pbar{height:5px;border-radius:3px;background:#e8e8ec;overflow:hidden;margin-top:4px}
 .pbar .pf{height:100%;border-radius:3px}
 
+/* 图表 */
+.chart-flex{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center}
+.chart-svg{flex-shrink:0}
+.chart-legend{flex:1;min-width:130px}
+.chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px;cursor:default}
+.chart-legend-item:hover{background:#f8f8fc;border-radius:4px;padding:0 4px}
+.chart-legend-dot{width:12px;height:12px;border-radius:3px;display:inline-block;flex-shrink:0}
+.chart-legend-num{margin-left:auto;color:#888;font-size:11px;white-space:nowrap}
+.chart-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.chart-bar-label{width:60px;text-align:right;flex-shrink:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-bar-track{flex:1;height:22px;background:#f0f0f5;border-radius:6px;overflow:hidden;position:relative;min-width:80px}
+.chart-bar-fill{height:100%;border-radius:6px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:10px;font-weight:600}
+.chart-bar-pct{width:40px;text-align:left;flex-shrink:0;font-size:11px;color:#666;font-weight:600}
+
 /* 村统计 */
 .village-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
 .v-bar{background:#f8f8fc;border-radius:8px;padding:9px 12px;cursor:pointer;transition:background .15s}
@@ -225,6 +239,11 @@ tr:hover td{background:#fafafe}
   /* 村统计 */
   .village-grid{grid-template-columns:1fr}
   .v-bar{padding:10px 12px}
+
+  /* 图表 - 移动端单列 */
+  #page-stats > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  .chart-svg{max-width:160px}
+  .chart-legend{min-width:100px}
   
   /* 详情 */
   .detail-box .dg{grid-template-columns:1fr !important}
@@ -329,11 +348,18 @@ tr:hover td{background:#fafafe}
 
   <!-- 统计分析（镇管理员可见） -->
   <div class="page" id="page-stats">
+    <!-- 概要统计卡片 -->
+    <div class="stats-grid" id="stats-summary"></div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="card"><div class="card-title">隐患类型分布</div><div id="chart-type"></div></div>
       <div class="card"><div class="card-title">隐患等级分布</div><div id="chart-level"></div></div>
     </div>
-    <div class="card" style="margin-top:12px"><div class="card-title">各村处置率</div><div id="chart-village"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="card"><div class="card-title">处置状态分布</div><div id="chart-status"></div></div>
+      <div class="card"><div class="card-title">各村隐患数量</div><div id="chart-village-count"></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><div class="card-title">各村处置进度</div><div id="chart-village"></div></div>
     <div class="card" style="margin-top:12px"><div class="card-title">超期未处置（上报超30天）</div><div id="overdue-list"></div></div>
   </div>
 
@@ -1113,49 +1139,196 @@ function batchDelete(){
 }
 
 /* ==================== 统计 ==================== */
-function fn_renderStats(){
-  const records = MR();
-  // 类型
-  const tc = {};
-  records.forEach(r=>{ tc[r.type]=(tc[r.type]||0)+1 });
-  const cols = ['#4a3fb5','#2563eb','#d97706','#dc2626','#16a34a','#6d28d9'];
-  document.getElementById('chart-type').innerHTML = Object.entries(tc).sort((a,b)=>b[1]-a[1]).map(([t,c],i)=>{
-    const pct = Math.round(c/records.length*100);
-    return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${t}</span><span style="color:#888">${c}件(${pct}%)</span></div><div class="pbar"><div class="pf" style="width:${pct}%;background:${cols[i%cols.length]}"></div></div></div>`;
-  }).join('');
 
-  // 等级
-  const lc = {1:0,2:0,3:0};
-  records.forEach(r=>{ if(r.level) lc[r.level]++ });
-  const lcols = ['#dc2626','#d97706','#16a34a'];
-  document.getElementById('chart-level').innerHTML = [1,2,3].map((l,i)=>{
-    const c=lc[l], total_lvl=records.filter(r=>r.level).length;
-    const pct = total_lvl?Math.round(c/total_lvl*100):0;
-    return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${LEVEL_T[l]}</span><span style="color:#888">${c}件</span></div><div class="pbar"><div class="pf" style="width:${pct}%;background:${lcols[i]}"></div></div></div>`;
-  }).join('');
-
-  // 村处置率
-  let vhtml = '<div style="overflow-x:auto"><table><thead><tr><th>村</th><th>上报</th><th>销号</th><th>处置率</th><th>进度</th></tr></thead><tbody>';
-  getVillages().forEach(v=>{
-    const vr = records.filter(r=>r.village===v);
-    if(!vr.length) return;
-    const dn = vr.filter(r=>r.status==='已销号').length;
-    const pct = Math.round(dn/vr.length*100);
-    vhtml += `<tr><td style="font-weight:500">${v}</td><td>${vr.length}</td><td>${dn}</td><td>${pct}%</td><td style="width:160px"><div class="pbar"><div class="pf" style="width:${pct}%;background:${pct>=80?'#16a34a':pct>=50?'#4a3fb5':'#dc2626'}"></div></div></td></tr>`;
+// SVG 饼图生成
+function makePieSVG(data, colors, size){
+  size = size || 180;
+  var total = 0;
+  data.forEach(function(d){ total += d.value; });
+  if(total === 0) return '<div style="color:#aaa;text-align:center;padding:30px 0;font-size:13px">暂无数据</div>';
+  var cx = size/2, cy = size/2, r = size/2 - 6;
+  var angle = -Math.PI/2;
+  var paths = '';
+  var legends = '';
+  data.forEach(function(d, i){
+    if(d.value === 0) return;
+    var slice = (d.value/total) * 2 * Math.PI;
+    var x1 = cx + r * Math.cos(angle);
+    var y1 = cy + r * Math.sin(angle);
+    angle += slice;
+    var x2 = cx + r * Math.cos(angle);
+    var y2 = cy + r * Math.sin(angle);
+    var largeArc = slice > Math.PI ? 1 : 0;
+    var color = colors[i % colors.length];
+    var pct = Math.round(d.value/total*100);
+    paths += '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+color+'" stroke="#fff" stroke-width="2" opacity="0.88"><title>'+d.label+': '+d.value+'件 ('+pct+'%)</title></path>';
+    legends += '<div class="chart-legend-item"><span class="chart-legend-dot" style="background:'+color+'"></span><span>'+d.label+'</span><span class="chart-legend-num">'+d.value+'件 ('+pct+'%)</span></div>';
   });
-  vhtml += '</tbody></table></div>';
-  document.getElementById('chart-village').innerHTML = vhtml;
+  return '<div class="chart-flex"><svg class="chart-svg" width="'+size+'" height="'+size+'">'+paths+'</svg><div class="chart-legend">'+legends+'</div></div>';
+}
 
-  // 超期
-  const today = new Date();
-  const od = records.filter(r=>{
+// SVG 环形图生成（中心显示总数）
+function makeDoughnutSVG(data, colors, size, centerLabel){
+  size = size || 180;
+  centerLabel = centerLabel || '总计';
+  var total = 0;
+  data.forEach(function(d){ total += d.value; });
+  if(total === 0) return '<div style="color:#aaa;text-align:center;padding:30px 0;font-size:13px">暂无数据</div>';
+  var cx = size/2, cy = size/2, r = size/2 - 6, ir = r * 0.58;
+  var angle = -Math.PI/2;
+  var paths = '';
+  var legends = '';
+  data.forEach(function(d, i){
+    if(d.value === 0) return;
+    var slice = (d.value/total) * 2 * Math.PI;
+    var x1 = cx + r * Math.cos(angle);
+    var y1 = cy + r * Math.sin(angle);
+    angle += slice;
+    var x2 = cx + r * Math.cos(angle);
+    var y2 = cy + r * Math.sin(angle);
+    var largeArc = slice > Math.PI ? 1 : 0;
+    var xi1 = cx + ir * Math.cos(angle - slice);
+    var yi1 = cy + ir * Math.sin(angle - slice);
+    var xi2 = cx + ir * Math.cos(angle);
+    var yi2 = cy + ir * Math.sin(angle);
+    var color = colors[i % colors.length];
+    var pct = Math.round(d.value/total*100);
+    paths += '<path d="M'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' L'+xi2.toFixed(2)+','+yi2.toFixed(2)+' A'+ir+','+ir+' 0 '+largeArc+' 0 '+xi1.toFixed(2)+','+yi1.toFixed(2)+' Z" fill="'+color+'" stroke="#fff" stroke-width="2" opacity="0.88"><title>'+d.label+': '+d.value+'件 ('+pct+'%)</title></path>';
+    legends += '<div class="chart-legend-item"><span class="chart-legend-dot" style="background:'+color+'"></span><span>'+d.label+'</span><span class="chart-legend-num">'+d.value+'件 ('+pct+'%)</span></div>';
+  });
+  // 中心文字
+  paths += '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="26" font-weight="700" fill="#333">'+total+'</text>';
+  paths += '<text x="'+cx+'" y="'+(cy+16)+'" text-anchor="middle" font-size="11" fill="#999">'+centerLabel+'</text>';
+  return '<div class="chart-flex"><svg class="chart-svg" width="'+size+'" height="'+size+'">'+paths+'</svg><div class="chart-legend">'+legends+'</div></div>';
+}
+
+// 水平柱状图生成（HTML/CSS）
+function makeBarChartH(data){
+  if(!data.length) return '<div style="color:#aaa;text-align:center;padding:30px 0;font-size:13px">暂无数据</div>';
+  var maxVal = 0;
+  data.forEach(function(d){ if(d.value > maxVal) maxVal = d.value; });
+  var html = '';
+  data.forEach(function(d){
+    var w = maxVal > 0 ? Math.round(d.value/maxVal*100) : 0;
+    var color = d.color || '#4a3fb5';
+    html += '<div class="chart-bar-row">';
+    html += '<div class="chart-bar-label" title="'+d.label+'">'+d.label+'</div>';
+    html += '<div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+w+'%;background:'+color+'">'+(d.value>0?d.value:'')+'</div></div>';
+    html += '<div class="chart-bar-pct">'+d.value+'</div>';
+    html += '</div>';
+  });
+  return html;
+}
+
+// 村处置率柱状图（双进度条）
+function makeVillageProgressChart(villages, records){
+  var data = [];
+  villages.forEach(function(v){
+    var vr = records.filter(function(r){ return r.village === v; });
+    if(!vr.length) return;
+    var dn = vr.filter(function(r){ return r.status === '已销号'; }).length;
+    var pct = Math.round(dn/vr.length*100);
+    data.push({village:v, total:vr.length, done:dn, pct:pct});
+  });
+  if(!data.length) return '<div style="color:#aaa;text-align:center;padding:30px 0;font-size:13px">暂无数据</div>';
+  var html = '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;padding:6px 8px">村</th><th style="text-align:center;padding:6px 8px">上报</th><th style="text-align:center;padding:6px 8px">销号</th><th style="text-align:center;padding:6px 8px">处置率</th><th style="padding:6px 8px;width:40%">进度条</th></tr></thead><tbody>';
+  data.forEach(function(d){
+    var barColor = d.pct >= 80 ? '#16a34a' : (d.pct >= 50 ? '#4a3fb5' : '#dc2626');
+    html += '<tr>';
+    html += '<td style="padding:6px 8px;font-weight:500">'+d.village+'</td>';
+    html += '<td style="text-align:center;padding:6px 8px">'+d.total+'</td>';
+    html += '<td style="text-align:center;padding:6px 8px">'+d.done+'</td>';
+    html += '<td style="text-align:center;padding:6px 8px;font-weight:600;color:'+barColor+'">'+d.pct+'%</td>';
+    html += '<td style="padding:6px 8px"><div class="chart-bar-track" style="height:18px"><div class="chart-bar-fill" style="width:'+d.pct+'%;background:'+barColor+'"></div></div></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function fn_renderStats(){
+  var records = MR();
+
+  // 概要统计卡片
+  var totalRec = records.length;
+  var level1 = records.filter(function(r){ return r.level === 1; }).length;
+  var inProgress = records.filter(function(r){ return r.status === '处置中'; }).length;
+  var doneRec = records.filter(function(r){ return r.status === '已销号'; }).length;
+  document.getElementById('stats-summary').innerHTML =
+    '<div class="stat-card" style="border-left:3px solid #4a3fb5" onclick="switchPage(\'list\')"><div class="label">隐患总数</div><div class="value" style="color:#4a3fb5">'+totalRec+'</div></div>' +
+    '<div class="stat-card" style="border-left:3px solid #dc2626" onclick="fn_applyFilterLevel(1)"><div class="label">一级重大</div><div class="value" style="color:#dc2626">'+level1+'</div></div>' +
+    '<div class="stat-card" style="border-left:3px solid #d97706" onclick="fn_applyFilterStatus(\'处置中\')"><div class="label">处置中</div><div class="value" style="color:#d97706">'+inProgress+'</div></div>' +
+    '<div class="stat-card" style="border-left:3px solid #16a34a" onclick="fn_applyFilterStatus(\'已销号\')"><div class="label">已销号</div><div class="value" style="color:#16a34a">'+doneRec+'</div></div>';
+
+  // 1. 隐患类型分布 - 饼图
+  var tc = {};
+  records.forEach(function(r){ tc[r.type] = (tc[r.type]||0)+1; });
+  var typeColors = ['#4a3fb5','#2563eb','#d97706','#dc2626','#16a34a','#6d28d9','#0891b2','#ca8a04'];
+  var typeData = Object.entries(tc).sort(function(a,b){ return b[1]-a[1]; }).map(function(e){
+    return {label:e[0], value:e[1]};
+  });
+  document.getElementById('chart-type').innerHTML = makePieSVG(typeData, typeColors, 180);
+
+  // 2. 隐患等级分布 - 环形图
+  var lc = {1:0, 2:0, 3:0};
+  records.forEach(function(r){ if(r.level) lc[r.level]++; });
+  var levelColors = ['#dc2626','#d97706','#16a34a'];
+  var levelData = [
+    {label:'一级（重大）', value:lc[1]},
+    {label:'二级（较大）', value:lc[2]},
+    {label:'三级（一般）', value:lc[3]},
+  ];
+  document.getElementById('chart-level').innerHTML = makeDoughnutSVG(levelData, levelColors, 180, '已定级');
+
+  // 3. 处置状态分布 - 环形图
+  var sc = {};
+  records.forEach(function(r){ sc[r.status] = (sc[r.status]||0)+1; });
+  var statusColorMap = {'处置中':'#d97706','待验收':'#2563eb','已销号':'#16a34a'};
+  var statusColors = [];
+  var statusData = Object.entries(sc).map(function(e){
+    statusColors.push(statusColorMap[e[0]] || '#6d28d9');
+    return {label:e[0], value:e[1]};
+  });
+  // 按固定顺序排序
+  var statusOrder = ['处置中','待验收','已销号'];
+  statusData.sort(function(a,b){ return statusOrder.indexOf(a.label) - statusOrder.indexOf(b.label); });
+  statusColors = statusData.map(function(d){ return statusColorMap[d.label] || '#6d28d9'; });
+  document.getElementById('chart-status').innerHTML = makeDoughnutSVG(statusData, statusColors, 180, '隐患总数');
+
+  // 4. 各村隐患数量 - 水平柱状图
+  var vc = {};
+  records.forEach(function(r){ vc[r.village] = (vc[r.village]||0)+1; });
+  var villageColors = ['#4a3fb5','#2563eb','#d97706','#dc2626','#16a34a','#6d28d9','#0891b2','#ca8a04','#9333ea','#059669','#be185d'];
+  var villageCountData = getVillages().map(function(v, i){
+    return {label:v, value:vc[v]||0, color:villageColors[i % villageColors.length]};
+  }).filter(function(d){ return d.value > 0; }).sort(function(a,b){ return b.value-a.value; });
+  document.getElementById('chart-village-count').innerHTML = makeBarChartH(villageCountData);
+
+  // 5. 各村处置进度 - 表格进度条
+  document.getElementById('chart-village').innerHTML = makeVillageProgressChart(getVillages(), records);
+
+  // 6. 超期
+  var today = new Date();
+  var od = records.filter(function(r){
     if(r.status==='已销号'||!r.created) return false;
     return (today-new Date(r.created))/(1000*60*60*24)>30;
   });
   document.getElementById('overdue-list').innerHTML = od.length ?
     '<div style="overflow-x:auto"><table><thead><tr><th>编号</th><th>村</th><th>地点</th><th>日期</th><th>天数</th><th>等级</th><th>状态</th></tr></thead><tbody>'+
-    od.map(r=>{ const d=Math.round((today-new Date(r.created))/(1000*60*60*24)); return `<tr><td class="id-cell">${r.id}</td><td>${r.village}</td><td>${r.loc}</td><td>${r.date}</td><td style="color:#dc2626;font-weight:600">${d}天</td><td>${r.level?`<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>`:'-'}</td><td><span class="badge ${STATUS_C[r.status]}">${r.status}</span></td></tr>` }).join('')+
+    od.map(function(r){ var d=Math.round((today-new Date(r.created))/(1000*60*60*24)); return '<tr><td class="id-cell">'+r.id+'</td><td>'+r.village+'</td><td>'+r.loc+'</td><td>'+r.date+'</td><td style="color:#dc2626;font-weight:600">'+d+'天</td><td>'+(r.level?'<span class="badge '+LEVEL_C[r.level]+'">'+LEVEL_T[r.level]+'</span>':'-')+'</td><td><span class="badge '+STATUS_C[r.status]+'">'+r.status+'</span></td></tr>' }).join('')+
     '</tbody></table></div>' : '<div style="padding:14px;color:#888;font-size:13px">暂无超期未处置隐患</div>';
+}
+
+// 统计页面快捷筛选
+function fn_applyFilterStatus(status){
+  switchPage('list');
+  var el = document.getElementById('f-status');
+  if(el){ el.value = status; fn_applyFilter(); }
+}
+function fn_applyFilterLevel(level){
+  switchPage('list');
+  var el = document.getElementById('f-level');
+  if(el){ el.value = String(level); fn_applyFilter(); }
 }
 
 /* ==================== 照片处理 ==================== */
@@ -1559,6 +1732,8 @@ window.updateBatchUI = updateBatchUI;
 window.selectAllPage = selectAllPage;
 window.clearSelection = clearSelection;
 window.batchDelete = batchDelete;
+window.fn_applyFilterStatus = fn_applyFilterStatus;
+window.fn_applyFilterLevel = fn_applyFilterLevel;
 </script>
 </body>
 </html>
