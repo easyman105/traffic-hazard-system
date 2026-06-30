@@ -695,7 +695,7 @@ function fn_renderDashboard(){
 
   // 村进度
   let bars='';
-  const vs = isTown ? getVillages() : [currentUser.village];
+  const vs = getVillages();
   vs.forEach(v=>{
     const vr = records.filter(r=>r.village===v);
     if(!vr.length) return;
@@ -706,7 +706,7 @@ function fn_renderDashboard(){
   document.getElementById('village-bars').innerHTML=bars||'<div style="color:#aaa;font-size:12px">暂无数据</div>';
 
   // 最近
-  const recent = vis.filter(r=>r.status!=='已销号').sort((a,b)=>b.created.localeCompare(a.created)).slice(0,8);
+  const recent = records.filter(r=>r.status!=='已销号').sort((a,b)=>b.created.localeCompare(a.created)).slice(0,8);
   document.getElementById('recent-body').innerHTML = recent.map(r=>`
     <tr style="cursor:pointer" onclick="viewRecord('${r.id}')">
       <td class="id-cell">${r.id}</td><td>${r.village}</td><td>${r.type}</td>
