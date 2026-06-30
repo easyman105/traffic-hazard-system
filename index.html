@@ -405,7 +405,7 @@ tr:hover td{background:#fafafe}
       </div>
     </div>
 
-    <!-- 数据备份/恢复 -->
+    <!-- 数据备份/恢复/导入 -->
     <div class="card" style="margin-top:16px">
       <div class="card-title">数据备份 / 恢复</div>
       <div style="padding:12px 0">
@@ -415,6 +415,27 @@ tr:hover td{background:#fafafe}
           <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
         </div>
         <div style="font-size:11px;color:#888">备份文件包含所有隐患记录、账号和日志。建议定期备份。</div>
+      </div>
+    </div>
+
+    <!-- 从Excel/CSV导入隐患记录 -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">从 Excel / CSV 导入隐患记录</div>
+      <div style="padding:12px 0">
+        <div style="margin-bottom:10px;font-size:12px;color:#666;line-height:1.7">
+          <b>使用说明：</b><br>
+          1. 可先点击下方"下载导入模板"获取标准格式<br>
+          2. 按模板填写数据（<b>编号</b>列留空将自动生成）<br>
+          3. 安全等级填：一级（重大）/ 二级（较大）/ 三级（一般）/ 未定级<br>
+          4. 状态填：处置中 / 待验收 / 已销号<br>
+          5. 上报日期格式：2026-07-01
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="btn btn-sm" onclick="downloadTemplate()">📋 下载导入模板</button>
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('import-file').click()">📁 选择Excel/CSV文件导入</button>
+          <input type="file" id="import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importRecords(event)">
+        </div>
+        <div id="import-result" style="display:none;margin-top:10px"></div>
       </div>
     </div>
 
@@ -1639,7 +1660,282 @@ function restoreData(e){
   };
   reader.readAsText(file);
 }
-/* ==================== 模态框工具 ==================== */
+
+/* ==================== Excel/CSV 导入 ==================== */
+
+// 下载导入模板
+function downloadTemplate(){
+  var headers = ['编号','上报日期','所在村','隐患类型','隐患地点','隐患描述','上报人','联系电话','安全等级','整改期限','责任单位','责任人','处置意见','状态'];
+  var sample = [
+    ['','2026-07-01','梅林村','道路损毁','梅林村3组弯道处','路面塌陷约2平米，影响通行','张三','13800138000','一级（重大）','2026-07-15','梅林村委会','李四','设置警示标志并修复路面','处置中'],
+    ['','2026-07-01','桂花村','标志缺失','桂花村主干道交叉口','交通标志牌缺失','王五','13900139000','二级（较大）','2026-07-20','桂花村委会','赵六','补装警示标志','处置中']
+  ];
+  var ws_data = [headers].concat(sample);
+  var ws = XLSX.utils.aoa_to_sheet(ws_data);
+  ws['!cols'] = headers.map(function(h,i){
+    if(i===4||i===5) return {wch:30};
+    if(i===12) return {wch:28};
+    return {wch:14};
+  });
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '隐患导入模板');
+  XLSX.writeFile(wb, '隐患记录导入模板.xlsx');
+}
+
+// 导入隐患记录
+function importRecords(e){
+  var file = e.target.files[0];
+  if(!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      var data;
+      var isCSV = file.name.toLowerCase().endsWith('.csv');
+
+      if(isCSV){
+        // CSV 解析
+        var text = ev.target.result;
+        // 去掉 BOM
+        if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+        if(lines.length < 2){
+          showImportResult(false, '文件中没有数据行');
+          e.target.value='';
+          return;
+        }
+        data = lines.map(function(line){ return parseCSVLine(line); });
+      } else {
+        // Excel 解析
+        var wb = XLSX.read(ev.target.result, {type:'array'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      }
+
+      if(data.length < 2){
+        showImportResult(false, '文件中没有数据行');
+        e.target.value='';
+        return;
+      }
+
+      // 解析表头，建立列映射
+      var headers = data[0].map(function(h){ return (h+'').trim(); });
+      var colMap = {};
+      var expectedCols = ['编号','上报日期','所在村','隐患类型','隐患地点','隐患描述','上报人','联系电话','安全等级','整改期限','责任单位','责任人','处置意见','状态'];
+      expectedCols.forEach(function(col){
+        var idx = headers.indexOf(col);
+        if(idx !== -1) colMap[col] = idx;
+      });
+
+      // 必填列检查
+      var required = ['上报日期','所在村','隐患类型','隐患地点'];
+      var missing = required.filter(function(c){ return colMap[c] === undefined; });
+      if(missing.length){
+        showImportResult(false, '缺少必要列：' + missing.join('、') + '。请使用模板格式。');
+        e.target.value='';
+        return;
+      }
+
+      // 解析数据行
+      var records = MR();
+      var existingIds = {};
+      records.forEach(function(r){ existingIds[r.id] = true; });
+
+      var villages = getVillages();
+      var newRecords = [];
+      var errors = [];
+      var levelReverse = {};
+      Object.keys(LEVEL_T).forEach(function(k){ levelReverse[LEVEL_T[k]] = parseInt(k); });
+
+      for(var i=1; i<data.length; i++){
+        var row = data[i];
+        if(!row || row.length === 0) continue;
+
+        // 跳过全空行
+        var hasData = false;
+        for(var j=0; j<row.length; j++){ if((row[j]+'').trim()){ hasData=true; break; } }
+        if(!hasData) continue;
+
+        var rowNum = i + 1;
+        var rec = {};
+
+        // 编号
+        var id = colMap['编号'] !== undefined ? (row[colMap['编号']]+'').trim() : '';
+        if(!id) {
+          id = genId(records.concat(newRecords));
+        }
+        if(existingIds[id]){
+          errors.push('第' + rowNum + '行：编号 ' + id + ' 已存在，已跳过');
+          continue;
+        }
+        rec.id = id;
+
+        // 上报日期
+        rec.date = (row[colMap['上报日期']]+'').trim();
+        if(!rec.date){
+          errors.push('第' + rowNum + '行：上报日期为空，已跳过');
+          continue;
+        }
+
+        // 所在村
+        rec.village = (row[colMap['所在村']]+'').trim();
+        if(villages.indexOf(rec.village) === -1){
+          errors.push('第' + rowNum + '行：村名"' + rec.village + '"不在系统村名列表中，已跳过');
+          continue;
+        }
+
+        // 隐患类型
+        rec.type = (row[colMap['隐患类型']]+'').trim();
+        if(!rec.type){
+          errors.push('第' + rowNum + '行：隐患类型为空，已跳过');
+          continue;
+        }
+
+        // 隐患地点
+        rec.loc = (row[colMap['隐患地点']]+'').trim();
+        if(!rec.loc){
+          errors.push('第' + rowNum + '行：隐患地点为空，已跳过');
+          continue;
+        }
+
+        // 可选字段
+        rec.desc = colMap['隐患描述'] !== undefined ? (row[colMap['隐患描述']]+'').trim() : '';
+        rec.reporter = colMap['上报人'] !== undefined ? (row[colMap['上报人']]+'').trim() : '';
+        rec.phone = colMap['联系电话'] !== undefined ? (row[colMap['联系电话']]+'').trim() : '';
+
+        // 安全等级
+        var levelStr = colMap['安全等级'] !== undefined ? (row[colMap['安全等级']]+'').trim() : '';
+        if(levelStr && levelReverse[levelStr]){
+          rec.level = levelReverse[levelStr];
+        } else {
+          rec.level = null;
+        }
+
+        // 整改期限
+        rec.deadline = colMap['整改期限'] !== undefined ? (row[colMap['整改期限']]+'').trim() : '';
+
+        // 责任单位
+        rec.dept = colMap['责任单位'] !== undefined ? (row[colMap['责任单位']]+'').trim() : '';
+
+        // 责任人
+        rec.owner = colMap['责任人'] !== undefined ? (row[colMap['责任人']]+'').trim() : '';
+
+        // 处置意见
+        rec.opinion = colMap['处置意见'] !== undefined ? (row[colMap['处置意见']]+'').trim() : '';
+
+        // 状态
+        var statusStr = colMap['状态'] !== undefined ? (row[colMap['状态']]+'').trim() : '';
+        if(statusStr && STATUS_C[statusStr]){
+          rec.status = statusStr;
+        } else {
+          rec.status = '处置中';
+        }
+
+        rec.created = rec.date;
+        rec.photos = [];
+
+        existingIds[rec.id] = true;
+        newRecords.push(rec);
+      }
+
+      if(newRecords.length === 0){
+        var msg = '没有有效的数据可导入。';
+        if(errors.length) msg += '\n\n问题明细：\n' + errors.slice(0,10).join('\n');
+        if(errors.length > 10) msg += '\n...等' + errors.length + '条问题';
+        showImportResult(false, msg);
+        e.target.value='';
+        return;
+      }
+
+      // 确认导入
+      var confirmMsg = '共解析出 ' + newRecords.length + ' 条有效记录。';
+      if(errors.length) confirmMsg += '\n（' + errors.length + ' 条有问题被跳过）';
+      confirmMsg += '\n\n确定要导入这 ' + newRecords.length + ' 条记录吗？';
+
+      if(!confirm(confirmMsg)){
+        showImportResult(false, '已取消导入。');
+        e.target.value='';
+        return;
+      }
+
+      // 执行导入
+      var allRecords = newRecords.concat(records);
+      MS(allRecords);
+      addLog('导入记录', '从文件导入 ' + newRecords.length + ' 条隐患记录');
+
+      // 显示结果
+      var successMsg = '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:8px">' +
+        '<div style="font-weight:600;color:#16a34a;margin-bottom:4px">导入成功！</div>' +
+        '<div style="font-size:12px;color:#666">共导入 ' + newRecords.length + ' 条记录。</div>' +
+        '</div>';
+
+      if(errors.length){
+        successMsg += '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px">' +
+          '<div style="font-weight:600;color:#d97706;margin-bottom:4px">跳过 ' + errors.length + ' 条：</div>' +
+          '<div style="font-size:11px;color:#92400e;max-height:120px;overflow-y:auto">' +
+          errors.map(function(err){ return '<div style="margin-bottom:2px">' + err + '</div>'; }).join('') +
+          '</div></div>';
+      }
+
+      var resultDiv = document.getElementById('import-result');
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = successMsg;
+
+      // 刷新页面数据
+      fn_renderDashboard();
+      fn_applyFilter();
+      fn_renderStats();
+
+    } catch(err){
+      showImportResult(false, '文件解析失败：' + err.message);
+    }
+    e.target.value='';
+  };
+
+  if(file.name.toLowerCase().endsWith('.csv')){
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+// CSV 行解析（处理引号和逗号）
+function parseCSVLine(line){
+  var result = [];
+  var current = '';
+  var inQuotes = false;
+  for(var i=0; i<line.length; i++){
+    var ch = line[i];
+    if(ch === '"'){
+      if(inQuotes && line[i+1] === '"'){
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if(ch === ',' && !inQuotes){
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+// 显示导入结果
+function showImportResult(success, message){
+  var div = document.getElementById('import-result');
+  div.style.display = 'block';
+  if(success){
+    div.innerHTML = '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;font-size:12px;color:#16a34a">' + message + '</div>';
+  } else {
+    div.innerHTML = '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;font-size:12px;color:#dc2626;white-space:pre-wrap">' + message + '</div>';
+  }
+}
+
+
 const M = {
   open: function(id){ document.getElementById(id).classList.add('open') },
   closeModal: function(id){ document.getElementById(id).classList.remove('open'); if(id==='addModal') resetDisabled(); },
@@ -1734,6 +2030,8 @@ window.clearSelection = clearSelection;
 window.batchDelete = batchDelete;
 window.fn_applyFilterStatus = fn_applyFilterStatus;
 window.fn_applyFilterLevel = fn_applyFilterLevel;
+window.downloadTemplate = downloadTemplate;
+window.importRecords = importRecords;
 </script>
 </body>
 </html>
