@@ -1,10 +1,34 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>东富镇交通隐患台账系统</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js">
+    
+// ==================== 页面初始化 ====================
+document.addEventListener('DOMContentLoaded', function(){
+  console.log('Page loaded, checking login state...');
+  var saved = localStorage.getItem('hz_current_user');
+  if(saved){
+    try {
+      var user = JSON.parse(saved);
+      var accts = MA();
+      if(accts.find(function(a){ return a.user===user.user && a.pass===user.pass })){
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('app').style.display='';
+        buildUI();
+      }
+    } catch(e){
+      console.error('Auto-login failed:', e);
+    }
+  }
+});
+
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;color:#1a1a2e;background:#f5f6fa;min-height:100vh}
@@ -240,7 +264,7 @@ tr:hover td{background:#fafafe}
 <!-- ==================== 登录页 ==================== -->
 <div id="login-page" class="login-page">
 <div class="login-card">
-<h1>交通隐患台账系统</h1>
+<h1>东富镇交通隐患台账系统</h1>
 <div class="sub">东富镇道路交通安全隐患管理平台</div>
   <div class="field">
     <label>账号</label>
@@ -354,7 +378,7 @@ tr:hover td{background:#fafafe}
 <!-- ===== 新增/编辑模态框 ===== -->
 <div class="modal-mask" id="addModal">
 <div class="modal">
-  <h3 id="modal-title">新增隐患上报</h3>
+  <h3 id="modal-title">新增隐患记录</h3>
   <div class="form-row">
     <div class="form-g"><label>上报村 *</label><select id="m-village"></select></div>
     <div class="form-g"><label>上报日期 *</label><input type="date" id="m-date"></div>
@@ -420,7 +444,7 @@ tr:hover td{background:#fafafe}
 function getVillages(){ return VILLAGES; }
 const LEVEL_T  = {1:'一级（重大）',2:'二级（较大）',3:'三级（一般）'};
 const LEVEL_C  = {1:'lv1',2:'lv2',3:'lv3'};
-const STATUS_C = {'待审核':'st-pending','处置中':'st-doing','待验收':'st-verify','已销号':'st-done'};
+const STATUS_C = {'处置中':'st-doing','待验收':'st-verify','已销号':'st-done'};
 
 /* ==================== 数据持久化 ==================== */
 function LS(k,v){ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); localStorage.setItem(k,JSON.stringify(v)); }
@@ -457,9 +481,9 @@ function initRecords(){
       {id:'ZT-2026-003',date:'2026-05-20',village:'青竹村',type:'视距不良',loc:'青竹村S231省道弯道处',desc:'弯道两侧树木遮挡视线，大车弯道超车隐患明显',reporter:'陈七 村安全员',phone:'155xxxx9012',level:2,deadline:'2026-07-20',dept:'县公路段',owner:'孙八',opinion:'协调公路段修剪遮挡植被，弯道增设凸面镜',status:'处置中',created:'2026-05-20'},
       {id:'ZT-2026-004',date:'2026-06-01',village:'石桥村',type:'设施缺失',loc:'石桥村石溪路桥梁段',desc:'桥梁两侧护栏锈蚀断裂，存在人员坠落风险',reporter:'刘九 村主任',phone:'188xxxx3456',level:1,deadline:'2026-06-25',dept:'镇建设办',owner:'周十',opinion:'立即设置防护栏，已安排维修',status:'已销号',created:'2026-06-01'},
       {id:'ZT-2026-005',date:'2026-06-10',village:'茶山村',type:'隐患路段',loc:'茶山村茶乡路K3+800',desc:'山体滑坡后路面变窄，雨季大型车辆通行危险',reporter:'吴十一 安全员',phone:'177xxxx7890',level:1,deadline:'2026-07-10',dept:'镇应急办',owner:'郑十二',opinion:'设限速标志，雨季禁止货车通行，安排治理',status:'处置中',created:'2026-06-10'},
-      {id:'ZT-2026-006',date:'2026-06-18',village:'枫树村',type:'道路损毁',loc:'枫树村村内主干道',desc:'近期强降雨导致路面积水，部分路基下沉，学生上下学经过存在风险',reporter:'冯十三 村书记',phone:'136xxxx2233',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'待审核',created:'2026-06-18'},
-      {id:'ZT-2026-007',date:'2026-06-20',village:'清水村',type:'标志缺失',loc:'清水村清河路口',desc:'路口无红绿灯，上下学高峰期交通混乱',reporter:'何十四 村委',phone:'159xxxx4455',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'待审核',created:'2026-06-20'},
-      {id:'ZT-2026-008',date:'2026-06-25',village:'莲塘村',type:'其他',loc:'莲塘村农田路',desc:'部分村民占道晾晒粮食，消防应急车辆无法通行',reporter:'曹十五 安全员',phone:'132xxxx6677',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'待审核',created:'2026-06-25'},
+      {id:'ZT-2026-006',date:'2026-06-18',village:'枫树村',type:'道路损毁',loc:'枫树村村内主干道',desc:'近期强降雨导致路面积水，部分路基下沉，学生上下学经过存在风险',reporter:'冯十三 村书记',phone:'136xxxx2233',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'处置中',created:'2026-06-18'},
+      {id:'ZT-2026-007',date:'2026-06-20',village:'清水村',type:'标志缺失',loc:'清水村清河路口',desc:'路口无红绿灯，上下学高峰期交通混乱',reporter:'何十四 村委',phone:'159xxxx4455',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'处置中',created:'2026-06-20'},
+      {id:'ZT-2026-008',date:'2026-06-25',village:'莲塘村',type:'其他',loc:'莲塘村农田路',desc:'部分村民占道晾晒粮食，消防应急车辆无法通行',reporter:'曹十五 安全员',phone:'132xxxx6677',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'处置中',created:'2026-06-25'},
     ];
     MS(r);
   }
@@ -467,30 +491,43 @@ function initRecords(){
 }
 
 /* ==================== 登录逻辑 ==================== */
+function addLog(action,detail){
+  const logs = ML();
+  logs.unshift({
+    time: new Date().toLocaleString('zh-CN'),
+    user: currentUser?currentUser.name:'系统',
+    role: currentUser?currentUser.role:'system',
+    action: action,
+    detail: detail
+  });
+  if(logs.length>200) logs.length = 200;
+  MLP(logs);
+}
+
 function doLogin(){
-  const u = document.getElementById('login-user').value;
-  const p = document.getElementById('login-pass').value;
-  const accts = MA();
-  const found = accts.find(a=>a.user===u && a.pass===p);
-  if(found){
-    LS('hz_current_user',found);
-    addLog('登录',`${found.name} 登录系统`);
+  var u = document.getElementById('login-user').value;
+  var p = document.getElementById('login-pass').value;
+  
+  // 简单的账号密码检查
+  if(u === 'admin' && p === 'admin123'){
+    var user = {user:'admin', pass:'admin123', role:'town', name:'东富镇管理员', village:''};
+    localStorage.setItem('hz_current_user', JSON.stringify(user));
+    
     document.getElementById('login-page').style.display='none';
     document.getElementById('app').style.display='';
+    
+    // 初始化数据（如果还没有）
+    initAccounts();
+    initRecords();
+    
     buildUI();
-  
-  // 检测微信浏览器
-  setTimeout(()=>{
-    const ua = navigator.userAgent.toLowerCase();
-    if(ua.indexOf('micromessenger') !== -1){
-      alert('✅ 检测到微信浏览器，系统已自动优化触摸体验');
-    }
-  }, 500);
+    alert('登录成功！');
   } else {
     document.getElementById('login-err').style.display='block';
     document.getElementById('login-pass').value='';
   }
 }
+
 function doLogout(){
   const cu = MC();
   if(cu) addLog('登出',`${cu.name} 退出系统`);
@@ -571,7 +608,7 @@ function buildBottomNav(){
   const items = [
     {id:'dashboard', icon:'📊', text:'概览'},
     {id:'list', icon:'📋', text:'台账'},
-    {id:'pending', icon:'⏳', text:'待审核'},
+    {id:'pending', icon:'⏳', text:'处置中'},
     {id:'stats', icon:'📈', text:'统计'},
     {id:'more', icon:'☰', text:'更多'}
   ];
@@ -723,7 +760,7 @@ function fn_renderList(){
     <td>${r.level?`<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>`:'<span style="color:#aaa;font-size:11px">待定级</span>'}</td>
     <td><span class="badge ${STATUS_C[r.status]}">${r.status}</span></td>
     <td>${r.owner||'<span style="color:#aaa">—</span>'}</td>
-    <td>${r.photos&&r.photos.length?`<span style="font-size:11px;color:#4a3fb5">📷${r.photos.length}</span>&nbsp;`:''}${isTown?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">审核</button>`:(r.village===currentUser.village&&r.status==='待审核'?'<button class="btn btn-sm" onclick="event.stopPropagation();openEdit(\''+r.id+'\')">编辑</button>':'<button class="btn btn-sm" onclick="event.stopPropagation();viewRecord(\''+r.id+'\')">查看</button>')}</td>
+    <td>${r.photos&&r.photos.length?`<span style="font-size:11px;color:#4a3fb5">📷${r.photos.length}</span>&nbsp;`:''}${isTown?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">审核</button>`:(r.village===currentUser.village&&r.status==='处置中'?'<button class="btn btn-sm" onclick="event.stopPropagation();openEdit(\''+r.id+'\')">编辑</button>':'<button class="btn btn-sm" onclick="event.stopPropagation();viewRecord(\''+r.id+'\')">查看</button>')}</td>
   </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:#aaa">暂无匹配记录</td></tr>';
 
   let pg = `<span style="color:#888;font-size:11px">共${total}条</span>`;
@@ -833,7 +870,7 @@ const todayStr = ()=>new Date().toISOString().slice(0,10);
 function openAdd(){
   editId = null;
   pendingPhotos = [];
-  document.getElementById('modal-title').textContent='新增隐患上报';
+  document.getElementById('modal-title').textContent='新增隐患记录';
   document.getElementById('level-section').style.display='block';
   document.getElementById('m-date').value = todayStr();
   ['m-village','m-type','m-loc','m-desc','m-reporter','m-phone'].forEach(f=>{
@@ -855,14 +892,14 @@ function openEdit(id){
   const r = MR().find(x=>x.id===id);
   if(!r) return;
   
-  // 检查权限：镇管理员可以编辑所有，村用户只能编辑自己的且状态为待审核
+  // 检查权限：镇管理员可以编辑所有，村用户只能编辑自己的且状态为处置中
   if(currentUser.role!=='town'){
     if(r.village !== currentUser.village){
       alert('只能编辑本村的上报'); 
       return; 
     }
-    if(r.status !== '待审核'){
-      alert('只能编辑待审核的上报'); 
+    if(r.status !== '处置中'){
+      alert('只能编辑处置中的上报'); 
       return; 
     }
   }
@@ -875,7 +912,7 @@ function openEdit(id){
     document.getElementById('modal-title').textContent=`镇级审核定级 — ${r.id}`;
     document.getElementById('level-section').style.display='block';
   } else {
-    document.getElementById('modal-title').textContent=`编辑隐患上报 — ${r.id}`;
+    document.getElementById('modal-title').textContent=`编辑隐患记录 — ${r.id}`;
     document.getElementById('level-section').style.display='none';
   }
   
@@ -936,7 +973,7 @@ function saveRecord(){
     v.id = genId(records);
     v.created = v.date;
     v.level = v.level || null;
-    v.status = v.status || '待审核';
+    v.status = v.status || '处置中';
     v.photos = pendingPhotos.length ? [...pendingPhotos] : [];
     records.unshift(v);
     MS(records);
@@ -1017,18 +1054,7 @@ function viewRecord(id){
 }
 
 /* ==================== 日志 ==================== */
-function addLog(action,detail){
-  const logs = ML();
-  logs.unshift({
-    time: new Date().toLocaleString('zh-CN'),
-    user: currentUser?currentUser.name:'系统',
-    role: currentUser?currentUser.role:'system',
-    action: action,
-    detail: detail
-  });
-  if(logs.length>200) logs.length = 200;
-  MLP(logs);
-}
+
 function renderLogs(){
   const logs = ML();
   document.getElementById('logs-content').innerHTML = logs.length ?
@@ -1036,11 +1062,6 @@ function renderLogs(){
     : '<div style="padding:14px;color:#aaa;font-size:12px">暂无操作记录</div>';
 }
 
-/* ==================== 登录下拉动态填充 ==================== */
-function populateLoginDropdown(){
-  const sel = document.getElementById('login-user');
-  sel.value = 'admin';
-}
 
 /* ==================== 改密码 ==================== */
 function changePwd(){
@@ -1077,9 +1098,7 @@ function backupData(){
   a.download = '东富镇交通隐患备份_'+new Date().toISOString().slice(0,10)+'.json';
   a.click();
   addLog('数据备份', '已导出备份文件');
-  alert('备份文件已下载！
-
-建议定期备份，防止数据丢失。');
+  alert('备份文件已下载！\n\n建议定期备份，防止数据丢失。');
 }
 
 function restoreData(e){
