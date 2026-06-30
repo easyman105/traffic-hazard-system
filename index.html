@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>某镇交通隐患台账系统</title>
+<title>东富镇交通隐患台账系统</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -241,13 +241,11 @@ tr:hover td{background:#fafafe}
 <div id="login-page" class="login-page">
 <div class="login-card">
 <h1>交通隐患台账系统</h1>
-<div class="sub">某镇道路交通安全隐患管理平台</div>
-<div class="field">
-  <label>登录账号</label>
-  <select id="login-user">
-    <option value="">加载中...</option>
-  </select>
-</div>
+<div class="sub">东富镇道路交通安全隐患管理平台</div>
+  <div class="field">
+    <label>账号</label>
+    <input type="text" id="login-user" value="admin" readonly style="background:#f0f0f5;color:#888">
+  </div>
 <div class="field">
   <label>密码</label>
   <input type="password" id="login-pass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')doLogin()">
@@ -321,14 +319,29 @@ tr:hover td{background:#fafafe}
     <div class="card" style="margin-top:12px"><div class="card-title">超期未处置（上报超30天）</div><div id="overdue-list"></div></div>
   </div>
 
-  <!-- 账号管理（镇管理员可见） -->
-  <div class="page" id="page-accounts">
+  <!-- 系统设置 -->
+  <div class="page" id="page-settings">
     <div class="card">
-      <div class="card-title">
-        <span>账号管理</span>
-        <button class="btn btn-primary btn-sm" onclick="openAccountAdd()">+ 新增账号</button>
+      <div class="card-title">系统设置</div>
+      <div style="font-size:13px;line-height:2">
+        <div style="margin-bottom:16px">
+          <b>修改密码</b>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+            <input type="password" id="old-pwd" placeholder="当前密码" style="padding:6px 10px;border:1px solid #d0d0d8;border-radius:7px;font-size:13px;width:140px">
+            <input type="password" id="new-pwd" placeholder="新密码" style="padding:6px 10px;border:1px solid #d0d0d8;border-radius:7px;font-size:13px;width:140px">
+            <button class="btn btn-primary btn-sm" onclick="changePwd()">修改</button>
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <b>数据备份 / 恢复</b>
+          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="backupData()">📤 导出备份文件</button>
+            <button class="btn btn-sm" onclick="document.getElementById('restore-file').click()">📥 从备份文件恢复</button>
+            <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:6px">备份文件包含所有隐患记录、账号和日志。建议定期备份。</div>
+        </div>
       </div>
-      <div id="accounts-list"></div>
     </div>
   </div>
 
@@ -412,7 +425,7 @@ tr:hover td{background:#fafafe}
 
 <script>
 /* ==================== 全局常量 ==================== */
-function getVillages(){ const accts=MA(); return accts.filter(a=>a.role==='village').map(a=>a.village); }
+function getVillages(){ return VILLAGES; }
 const LEVEL_T  = {1:'一级（重大）',2:'二级（较大）',3:'三级（一般）'};
 const LEVEL_C  = {1:'lv1',2:'lv2',3:'lv3'};
 const STATUS_C = {'待审核':'st-pending','处置中':'st-doing','待验收':'st-verify','已销号':'st-done'};
@@ -428,26 +441,17 @@ function MAP(v){ LS('hz_accounts',v) }
 function MC(){ return LS('hz_current_user')||null }
 
 /* ==================== 账号系统 ==================== */
+// 11个村（上报时选择，不再作为独立账号）
+const VILLAGES = ['梅林村','桂花村','青竹村','石桥村','茶山村','枫树村','清水村','莲塘村','杨柳村','槐树村','松岭村'];
+
 function initAccounts(){
   let accts = MA();
   if(accts.length===0){
     accts = [
-      {user:'admin',pass:'admin123',role:'town',name:'镇管理员',village:''},
-      {user:'梅林村',pass:'123456',role:'village',name:'梅林村安全员',village:'梅林村'},
-      {user:'桂花村',pass:'123456',role:'village',name:'桂花村安全员',village:'桂花村'},
-      {user:'青竹村',pass:'123456',role:'village',name:'青竹村安全员',village:'青竹村'},
-      {user:'石桥村',pass:'123456',role:'village',name:'石桥村安全员',village:'石桥村'},
-      {user:'茶山村',pass:'123456',role:'village',name:'茶山村安全员',village:'茶山村'},
-      {user:'枫树村',pass:'123456',role:'village',name:'枫树村安全员',village:'枫树村'},
-      {user:'清水村',pass:'123456',role:'village',name:'清水村安全员',village:'清水村'},
-      {user:'莲塘村',pass:'123456',role:'village',name:'莲塘村安全员',village:'莲塘村'},
-      {user:'杨柳村',pass:'123456',role:'village',name:'杨柳村安全员',village:'杨柳村'},
-      {user:'槐树村',pass:'123456',role:'village',name:'槐树村安全员',village:'槐树村'},
-      {user:'松岭村',pass:'123456',role:'village',name:'松岭村安全员',village:'松岭村'},
+      {user:'admin',pass:'admin123',role:'town',name:'东富镇管理员',village:''},
     ];
     MAP(accts);
   }
-  populateLoginDropdown();
   return accts;
 }
 
@@ -510,56 +514,40 @@ let currentUser = null;
 function buildUI(){
   currentUser = MC();
   if(!currentUser) return;
-  const isTown = currentUser.role==='town';
   document.getElementById('display-name').textContent = currentUser.name;
   const rb = document.getElementById('role-badge');
-  rb.textContent = isTown ? '镇管理员' : currentUser.village + ' 上报员';
-  rb.className = 'role-badge ' + (isTown?'role-town':'role-village');
-
-  // 导航
+  rb.textContent = '东富镇管理员';
+  rb.className = 'role-badge role-town';
+  
+  // 导航（只有一个账号，直接显示所有功能）
   const nav = document.getElementById('main-nav');
-  let navItems = [{id:'dashboard',txt:'概览'}];
-  if(isTown){
-    navItems.push({id:'list',txt:'隐患台账'});
-    navItems.push({id:'pending',txt:'待审核'});
-    navItems.push({id:'stats',txt:'统计'});
-    navItems.push({id:'accounts',txt:'账号管理'});
-    navItems.push({id:'logs',txt:'日志'});
-  } else {
-    navItems.push({id:'list',txt:'本村台账'});
-    navItems.push({id:'logs',txt:'日志'});
-  }
+  const navItems = [
+    {id:'dashboard',txt:'概览'},
+    {id:'list',txt:'隐患台账'},
+    {id:'pending',txt:'待审核'},
+    {id:'stats',txt:'统计'},
+    {id:'logs',txt:'日志'},
+  ];
   nav.innerHTML = navItems.map(n=>`<a href="#" data-tab="${n.id}" class="${n.id==='dashboard'?'active':''}">${n.txt}</a>`).join('');
   nav.querySelectorAll('a').forEach(a=>{
     a.addEventListener('click',e=>{ e.preventDefault(); switchPage(a.dataset.tab) });
   });
-
-  // 村下拉
+  
+  // 村下拉（筛选+表单）
   const fv = document.getElementById('f-village');
   const mv = document.getElementById('m-village');
-
+  fv.innerHTML = '<option value="">全部村</option>';
+  mv.innerHTML = '';
+  VILLAGES.forEach(v=>{
+    fv.innerHTML += `<option value="${v}">${v}</option>`;
+    mv.innerHTML += `<option value="${v}">${v}</option>`;
+  });
+  
   // 导出按钮 + 新增上报按钮
   document.getElementById('export-btns').innerHTML = `<button class="btn btn-primary btn-sm" onclick="exportExcel()">导出Excel</button> <button class="btn btn-sm" onclick="exportCSV()">导出CSV</button>`;
-  if(!isTown){
-    document.getElementById('add-btn-place').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAdd()">+ 新增上报</button>`;
-  }
-
-  if(!isTown){
-    // 村用户锁定自己的村
-    fv.innerHTML = `<option value="${currentUser.village}">${currentUser.village}</option>`;
-    fv.disabled = true;
-    mv.innerHTML = `<option value="${currentUser.village}">${currentUser.village}</option>`;
-    mv.disabled = true;
-  } else {
-    fv.innerHTML = '<option value="">全部村</option>';
-    mv.innerHTML = '';
-    getVillages().forEach(v=>{
-      fv.innerHTML += `<option value="${v}">${v}</option>`;
-      mv.innerHTML += `<option value="${v}">${v}</option>`;
-    });
-  }
-
-  loadData(isTown);
+  document.getElementById('add-btn-place').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAdd()">+ 新增上报</button>`;
+  
+  loadData(true);
   buildBottomNav();
   
   // 添加微信访问按钮
@@ -587,35 +575,18 @@ function buildUI(){
 function buildBottomNav(){
   const nav = document.getElementById('bottom-nav');
   if(!nav) return;
-  
-  const isTown = currentUser.role==='town';
-  let items;
-  
-  if(isTown){
-    items = [
-      {id:'dashboard', icon:'📊', text:'概览'},
-      {id:'list', icon:'📋', text:'台账'},
-      {id:'pending', icon:'⏳', text:'待审核'},
-      {id:'stats', icon:'📈', text:'统计'},
-      {id:'more', icon:'☰', text:'更多'}
-    ];
-  } else {
-    items = [
-      {id:'dashboard', icon:'📊', text:'概览'},
-      {id:'list', icon:'📋', text:'本村台账'},
-      {id:'add', icon:'➕', text:'上报'},
-      {id:'logs', icon:'📝', text:'日志'},
-      {id:'more', icon:'☰', text:'更多'}
-    ];
-  }
-  
+
+  // 只有一个账号，直接显示所有功能
+  const items = [
+    {id:'dashboard', icon:'📊', text:'概览'},
+    {id:'list', icon:'📋', text:'台账'},
+    {id:'pending', icon:'⏳', text:'待审核'},
+    {id:'stats', icon:'📈', text:'统计'},
+    {id:'more', icon:'☰', text:'更多'}
+  ];
+
   nav.innerHTML = items.map(item => {
-    if(item.id === 'add'){
-      return `<a href="#" onclick="event.preventDefault();openAdd()">
-        <span class="nav-icon">${item.icon}</span>
-        <span class="nav-text">${item.text}</span>
-      </a>`;
-    } else if(item.id === 'more'){
+    if(item.id === 'more'){
       return `<a href="#" onclick="event.preventDefault();toggleMoreMenu()">
         <span class="nav-icon">${item.icon}</span>
         <span class="nav-text">${item.text}</span>
@@ -627,8 +598,7 @@ function buildBottomNav(){
       </a>`;
     }
   }).join('');
-  
-  // 默认激活第一个
+
   updateBottomNav('dashboard');
 }
 
@@ -647,21 +617,10 @@ function updateBottomNav(tab){
 }
 
 function toggleMoreMenu(){
-  // 简单的更多菜单 - 可以在这里扩展
-  const isTown = currentUser.role==='town';
-  let options = [];
-  
-  if(isTown){
-    options = [
-      {id:'accounts', text:'账号管理'},
-      {id:'logs', text:'操作日志'}
-    ];
-  } else {
-    options = [
-      {id:'logs', text:'操作日志'}
-    ];
-  }
-  
+  const options = [
+    {id:'settings', text:'系统设置'},
+    {id:'logs', text:'操作日志'}
+  ];
   const choice = prompt('请选择：\n' + options.map((o,i) => (i+1) + '. ' + o.text).join('\n'));
   if(choice){
     const idx = parseInt(choice) - 1;
@@ -675,15 +634,14 @@ function toggleMoreMenu(){
 function switchPage(tab){
   document.querySelectorAll('#main-nav a').forEach(a=>a.classList.toggle('active',a.dataset.tab===tab));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+tab).classList.add('active');
-  const isTown = currentUser.role==='town';
+  const page = document.getElementById('page-'+tab);
+  if(page) page.classList.add('active');
   if(tab==='list') fn_applyFilter();
-  if(tab==='pending' && isTown) fn_renderPending();
-  if(tab==='stats' && isTown) fn_renderStats();
+  if(tab==='pending') fn_renderPending();
+  if(tab==='stats') fn_renderStats();
   if(tab==='dashboard') fn_renderDashboard();
-  if(tab==='accounts' && isTown) renderAccounts();
   if(tab==='logs') renderLogs();
-  
+  if(tab==='settings'){} // 设置页无需额外渲染
   // 更新底部导航
   updateBottomNav(tab);
 }
@@ -1109,100 +1067,75 @@ function renderLogs(){
 /* ==================== 登录下拉动态填充 ==================== */
 function populateLoginDropdown(){
   const sel = document.getElementById('login-user');
-  sel.innerHTML = '<option value="admin">镇管理员（admin）</option>';
-  getVillages().forEach(v=>{
-    sel.innerHTML += `<option value="${v}">${v}</option>`;
-  });
+  sel.value = 'admin';
 }
 
-/* ==================== 账号管理 ==================== */
-function renderAccounts(){
+/* ==================== 改密码 ==================== */
+function changePwd(){
+  const oldP = document.getElementById('old-pwd').value;
+  const newP = document.getElementById('new-pwd').value;
+  if(!oldP || !newP){ alert('请填写完整'); return; }
+  if(newP.length<4){ alert('新密码至少4位'); return; }
   const accts = MA();
-  let html = '<div style="overflow-x:auto"><table><thead><tr><th>账号</th><th>姓名</th><th>角色</th><th>所属村</th><th>密码</th><th>操作</th></tr></thead><tbody>';
-  accts.forEach(a=>{
-    html += `<tr>
-      <td style="font-weight:600">${a.user}</td>
-      <td>${a.name}</td>
-      <td><span class="badge ${a.role==='town'?'role-town':'role-village'}">${a.role==='town'?'镇管理员':'村上报员'}</span></td>
-      <td>${a.village||'—'}</td>
-      <td><input type="text" id="pwd-${a.user}" value="${a.pass}" style="width:100px;padding:3px 6px;border:1px solid #d0d0d8;border-radius:5px;font-size:11px"></td>
-      <td>
-        <button class="btn btn-primary btn-sm" onclick="savePwd('${a.user}')">修改密码</button>
-        <button class="btn btn-sm" onclick="resetPwd('${a.user}')">重置</button>
-        ${a.role!=='town'?`<button class="btn btn-sm" onclick="renameVillage('${a.user}')">改名</button> <button class="btn btn-sm" style="color:#dc2626;border-color:#dc2626" onclick="deleteAcct('${a.user}')">删除</button>`:''}
-      </td>
-    </tr>`;
-  });
-  html += '</tbody></table></div>';
-  document.getElementById('accounts-list').innerHTML = html;
-}
-
-function openAccountAdd(){
-  const v = prompt('请输入新账号的村名：\n'+getVillages().join('、'));
-  if(!v) return;
-  if(!getVillages().includes(v)){ alert('村名无效，请从已有村中选择'); return; }
-  const accts = MA();
-  if(accts.find(a=>a.user===v)){ alert('该村账号已存在'); return; }
-  accts.push({user:v,pass:'123456',role:'village',name:v+'安全员',village:v});
+  const a = accts.find(x=>x.user==='admin');
+  if(!a || a.pass!==oldP){ alert('当前密码错误'); return; }
+  a.pass = newP;
   MAP(accts);
-  addLog('新增账号',`创建村账号：${v}`);
-  renderAccounts();
+  currentUser.pass = newP;
+  LS('hz_current_user', currentUser);
+  document.getElementById('old-pwd').value='';
+  document.getElementById('new-pwd').value='';
+  alert('密码修改成功！');
+  addLog('修改密码', 'admin 密码已修改');
 }
 
-function resetPwd(user){
-  if(!confirm(`确定重置账号「${user}」的密码为 123456？`)) return;
-  const accts = MA();
-  const a = accts.find(x=>x.user===user);
-  if(a){ a.pass='123456'; MAP(accts); addLog('重置密码',`账号 ${user} 密码已重置`); renderAccounts(); }
+/* ==================== 数据备份 / 恢复 ==================== */
+function backupData(){
+  const data = {
+    version: 1,
+    backupTime: new Date().toLocaleString('zh-CN'),
+    records: MR(),
+    accounts: MA(),
+    logs: ML(),
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '东富镇交通隐患备份_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  addLog('数据备份', '已导出备份文件');
+  alert('备份文件已下载！
+
+建议定期备份，防止数据丢失。');
 }
 
-function savePwd(user){
-  const newPwd = document.getElementById('pwd-'+user).value.trim();
-  if(!newPwd){ alert('密码不能为空'); return; }
-  if(newPwd.length<4){ alert('密码至少4位'); return; }
-  if(!confirm(`确定将账号「${user}」的密码修改为「${newPwd}」？`)) return;
-  const accts = MA();
-  const a = accts.find(x=>x.user===user);
-  if(a){ a.pass=newPwd; MAP(accts); addLog('修改密码',`账号 ${user} 密码已修改`); renderAccounts(); }
+function restoreData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!confirm('恢复备份将覆盖当前所有数据，确定继续？')){ e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data.records || !data.accounts){
+        alert('备份文件格式不正确');
+        e.target.value='';
+        return;
+      }
+      MS(data.records);
+      MAP(data.accounts);
+      if(data.logs) MLP(data.logs);
+      addLog('数据恢复', '已从备份文件恢复数据');
+      alert('数据恢复成功！页面将刷新。');
+      location.reload();
+    } catch(err){
+      alert('备份文件解析失败：' + err.message);
+    }
+    e.target.value='';
+  };
+  reader.readAsText(file);
 }
-
-function deleteAcct(user){
-  if(!confirm(`确定删除账号「${user}」？此操作不可撤销。`)) return;
-  const accts = MA().filter(a=>a.user!==user);
-  MAP(accts);
-  addLog('删除账号',`账号 ${user} 已被删除`);
-  renderAccounts();
-}
-
-function renameVillage(oldName){
-  const newName = prompt(`将村名/账号「${oldName}」修改为：`);
-  if(!newName || !newName.trim()) return;
-  const nv = newName.trim();
-  if(nv === oldName) return;
-  const accts = MA();
-  if(accts.find(a=>a.user===nv)){ alert('该账号名已存在，请换一个'); return; }
-  const acct = accts.find(a=>a.user===oldName);
-  if(!acct) return;
-  acct.user = nv;
-  acct.village = nv;
-  acct.name = nv + '安全员';
-  MAP(accts);
-  const records = MR();
-  records.forEach(r=>{ if(r.village===oldName) r.village = nv; });
-  MS(records);
-  const cu = MC();
-  if(cu && cu.user === oldName){
-    cu.user = nv;
-    cu.village = nv;
-    cu.name = nv + '安全员';
-    LS('hz_current_user', cu);
-    currentUser = cu;
-  }
-  populateLoginDropdown();
-  renderAccounts();
-  addLog('修改村名', `账号 ${oldName} 已更名为 ${nv}`);
-}
-
 /* ==================== 模态框工具 ==================== */
 const M = {
   open: function(id){ document.getElementById(id).classList.add('open') },
