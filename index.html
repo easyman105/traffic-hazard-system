@@ -308,10 +308,17 @@ tr:hover td{background:#fafafe}
         <select id="f-status" onchange="fn_applyFilter()"><option value="">全部状态</option><option>处置中</option><option>待验收</option><option>已销号</option></select>
         <input id="f-keyword" placeholder="搜索地点/描述" oninput="fn_applyFilter()">
         <span style="flex:1"></span>
+        <span id="batch-btns" style="display:none;gap:6px;align-items:center">
+          <span id="batch-count" style="font-size:12px;color:#666"></span>
+          <button class="btn btn-sm" onclick="selectAllPage()">全选本页</button>
+          <button class="btn btn-sm" onclick="clearSelection()">取消选择</button>
+          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;border:none" onclick="batchDelete()">删除选中</button>
+        </span>
         <span id="export-btns"></span>
         <span id="add-btn-place"></span>
       </div>
       <div class="tbl-wrap"><table><thead><tr>
+        <th style="width:32px"><input type="checkbox" id="select-all-cb" onchange="selectAllPage(this.checked)"></th>
         <th>编号</th><th>日期</th><th>村</th><th>类型</th><th>地点</th><th>等级</th><th>状态</th><th>责任人</th><th>操作</th>
       </tr></thead><tbody id="list-body"></tbody></table></div>
       <div class="pager" id="list-pager"></div>
@@ -969,13 +976,14 @@ function fn_renderList(){
   const isTown = currentUser.role==='town';
 
   document.getElementById('list-body').innerHTML = page.map(r=>`<tr style="cursor:pointer" onclick="viewRecord('${r.id}')">
+    <td onclick="event.stopPropagation()"><input type="checkbox" class="row-cb" value="${r.id}" onchange="updateBatchUI()"></td>
     <td class="id-cell">${r.id}</td><td>${r.date}</td><td>${r.village}</td><td>${r.type}</td>
     <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.loc}">${r.loc}</td>
     <td>${r.level?`<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>`:'<span style="color:#aaa;font-size:11px">待定级</span>'}</td>
     <td><span class="badge ${STATUS_C[r.status]}">${r.status}</span></td>
     <td>${r.owner||'<span style="color:#aaa">—</span>'}</td>
     <td>${r.photos&&r.photos.length?`<span style="font-size:11px;color:#4a3fb5">📷${r.photos.length}</span>&nbsp;`:''}${isTown?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">操作</button>`:(r.village===currentUser.village&&r.status==='处置中'?'<button class="btn btn-sm" onclick="event.stopPropagation();openEdit(\''+r.id+'\')">编辑</button>':'<button class="btn btn-sm" onclick="event.stopPropagation();viewRecord(\''+r.id+'\')">查看</button>')}</td>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:#aaa">暂无匹配记录</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;padding:24px;color:#aaa">暂无匹配记录</td></tr>';
 
   let pg = `<span style="color:#888;font-size:11px">共${total}条</span>`;
   pg += `<button ${curPage<=1?'disabled':''} onclick="curPage--;fn_renderList()">上一页</button>`;
@@ -985,6 +993,123 @@ function fn_renderList(){
   }
   pg += `<button ${curPage>=pages?'disabled':''} onclick="curPage++;fn_renderList()">下一页</button>`;
   document.getElementById('list-pager').innerHTML = pg;
+
+  // Restore checkbox states after re-render
+  document.querySelectorAll('.row-cb').forEach(cb => {
+    if (selectedIds.has(cb.value)) cb.checked = true;
+  });
+  updateBatchUI();
+}
+
+/* ==================== 批量操作 ==================== */
+var selectedIds = new Set();
+
+function updateBatchUI(){
+  var cbs = document.querySelectorAll('.row-cb');
+  var checkedCount = 0;
+  cbs.forEach(function(cb){ if(cb.checked) checkedCount++; });
+
+  var batchBtns = document.getElementById('batch-btns');
+  var batchCount = document.getElementById('batch-count');
+  var selectAllCb = document.getElementById('select-all-cb');
+
+  if(checkedCount > 0){
+    batchBtns.style.display = 'flex';
+    batchCount.textContent = '已选 ' + checkedCount + ' 条';
+  } else {
+    batchBtns.style.display = 'none';
+  }
+
+  // Update select-all checkbox state
+  if(selectAllCb){
+    if(cbs.length > 0 && checkedCount === cbs.length){
+      selectAllCb.checked = true;
+    } else {
+      selectAllCb.checked = false;
+    }
+  }
+
+  // Sync selectedIds set
+  cbs.forEach(function(cb){
+    if(cb.checked){
+      selectedIds.add(cb.value);
+    } else {
+      selectedIds.delete(cb.value);
+    }
+  });
+}
+
+function selectAllPage(checked){
+  if(checked === undefined) checked = true;
+  document.querySelectorAll('.row-cb').forEach(function(cb){ cb.checked = checked; });
+  updateBatchUI();
+}
+
+function clearSelection(){
+  document.querySelectorAll('.row-cb').forEach(function(cb){ cb.checked = false; });
+  selectedIds.clear();
+  var sa = document.getElementById('select-all-cb');
+  if(sa) sa.checked = false;
+  updateBatchUI();
+}
+
+function batchDelete(){
+  // Gather all selected IDs (including from other pages)
+  var ids = Array.from(selectedIds);
+  if(ids.length === 0){
+    var cbs = document.querySelectorAll('.row-cb:checked');
+    cbs.forEach(function(cb){ ids.push(cb.value); });
+  }
+  if(ids.length === 0){
+    alert('请先勾选要删除的记录');
+    return;
+  }
+
+  var count = ids.length;
+  var records = MR();
+  var toDelete = ids.map(function(id){
+    var r = records.find(function(x){ return x.id === id; });
+    return r ? (r.id + ' | ' + r.village + ' | ' + r.type + ' | ' + (r.loc||'')) : id;
+  });
+
+  // Step 1: Show what will be deleted
+  var msg1 = '【删除确认 - 第1步/共3步】\n\n';
+  msg1 += '您即将删除以下 ' + count + ' 条隐患记录：\n\n';
+  msg1 += toDelete.slice(0, 10).join('\n');
+  if(toDelete.length > 10) msg1 += '\n... 等共 ' + count + ' 条';
+  msg1 += '\n\n此操作不可撤销，删除后数据将永久丢失！\n\n确定要继续吗？';
+  if(!confirm(msg1)) return;
+
+  // Step 2: Type confirmation
+  var msg2 = '【删除确认 - 第2步/共3步】\n\n';
+  msg2 += '请输入"确认删除"四个字以继续：';
+  var input = prompt(msg2);
+  if(input !== '确认删除'){
+    alert('输入不匹配，已取消删除。');
+    return;
+  }
+
+  // Step 3: Final confirmation
+  var msg3 = '【删除确认 - 第3步/共3步 - 最终确认】\n\n';
+  msg3 += '即将永久删除 ' + count + ' 条隐患记录！\n\n';
+  msg3 += '这是最后一次确认，点击"确定"后将立即执行删除，无法恢复！\n\n';
+  msg3 += '点击"取消"可中止操作。';
+  if(!confirm(msg3)) return;
+
+  // Execute deletion
+  var remaining = records.filter(function(r){ return !selectedIds.has(r.id); });
+  MS(remaining);
+
+  // Log
+  addLog('批量删除', '删除了 ' + count + ' 条隐患记录：' + ids.join(', '));
+
+  // Clear selection
+  selectedIds.clear();
+
+  // Refresh
+  fn_renderList();
+  fn_renderDashboard();
+  alert('已成功删除 ' + count + ' 条记录。');
 }
 
 /* ==================== 统计 ==================== */
@@ -1430,6 +1555,10 @@ window.handlePhotoSelect = handlePhotoSelect;
 window.viewDetailPhoto = viewDetailPhoto;
 window.showFullImg = showFullImg;
 window.delPhoto = delPhoto;
+window.updateBatchUI = updateBatchUI;
+window.selectAllPage = selectAllPage;
+window.clearSelection = clearSelection;
+window.batchDelete = batchDelete;
 </script>
 </body>
 </html>
