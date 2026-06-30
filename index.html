@@ -286,7 +286,7 @@ tr:hover td{background:#fafafe}
         <select id="f-village" onchange="fn_applyFilter()"><option value="">全部村</option></select>
         <select id="f-type" onchange="fn_applyFilter()"><option value="">全部类型</option><option>道路损毁</option><option>标志缺失</option><option>视距不良</option><option>隐患路段</option><option>设施缺失</option><option>其他</option></select>
         <select id="f-level" onchange="fn_applyFilter()"><option value="">全部等级</option><option value="1">一级</option><option value="2">二级</option><option value="3">三级</option></select>
-        <select id="f-status" onchange="fn_applyFilter()"><option value="">全部状态</option><option>待审核</option><option>处置中</option><option>待验收</option><option>已销号</option></select>
+        <select id="f-status" onchange="fn_applyFilter()"><option value="">全部状态</option><option>处置中</option><option>待验收</option><option>已销号</option></select>
         <input id="f-keyword" placeholder="搜索地点/描述" oninput="fn_applyFilter()">
         <span style="flex:1"></span>
         <span id="export-btns"></span>
@@ -299,15 +299,7 @@ tr:hover td{background:#fafafe}
     </div>
   </div>
 
-  <!-- 待审核（镇管理员可见） -->
-  <div class="page" id="page-pending">
-    <div class="card">
-      <div style="font-size:12px;color:#888;margin-bottom:10px">各村已上报、尚未审核定级的隐患</div>
-      <div class="tbl-wrap"><table><thead><tr>
-        <th>编号</th><th>日期</th><th>村</th><th>地点</th><th>描述</th><th>上报人</th><th>操作</th>
-      </tr></thead><tbody id="pending-body"></tbody></table></div>
-    </div>
-  </div>
+
 
   <!-- 统计分析（镇管理员可见） -->
   <div class="page" id="page-stats">
@@ -398,7 +390,7 @@ tr:hover td{background:#fafafe}
     </div>
     <div class="form-row one"><div class="form-g"><label>处置意见</label><textarea id="m-opinion" placeholder="镇级处置建议、整改要求等"></textarea></div></div>
     <div class="form-row">
-      <div class="form-g"><label>状态</label><select id="m-status"><option>待审核</option><option>处置中</option><option>待验收</option><option>已销号</option></select></div>
+      <div class="form-g"><label>状态</label><select id="m-status"><option>处置中</option><option>待验收</option><option>已销号</option></select></div>
     </div>
   </div>
   <div class="form-actions">
@@ -524,7 +516,6 @@ function buildUI(){
   const navItems = [
     {id:'dashboard',txt:'概览'},
     {id:'list',txt:'隐患台账'},
-    {id:'pending',txt:'待审核'},
     {id:'stats',txt:'统计'},
     {id:'logs',txt:'日志'},
   ];
@@ -637,7 +628,6 @@ function switchPage(tab){
   const page = document.getElementById('page-'+tab);
   if(page) page.classList.add('active');
   if(tab==='list') fn_applyFilter();
-  if(tab==='pending') fn_renderPending();
   if(tab==='stats') fn_renderStats();
   if(tab==='dashboard') fn_renderDashboard();
   if(tab==='logs') renderLogs();
@@ -650,26 +640,20 @@ function switchPage(tab){
 function loadData(isTown){
   fn_renderDashboard();
   fn_applyFilter();
-  if(isTown) fn_renderPending();
-  if(isTown) initAccounts();
 }
 
 /* ==================== 概览 ==================== */
 function fn_renderDashboard(){
   const records = MR();
-  const isTown = currentUser.role==='town';
-  let vis = isTown ? records : records.filter(r=>r.village===currentUser.village);
-  const total = vis.length;
-  const lv1 = vis.filter(r=>r.level===1).length;
-  const proc = vis.filter(r=>r.status==='处置中').length;
-  const done = vis.filter(r=>r.status==='已销号').length;
-  const pending = vis.filter(r=>r.status==='待审核').length;
+  const total = records.length;
+  const lv1 = records.filter(r=>r.level===1).length;
+  const proc = records.filter(r=>r.status==='处置中').length;
+  const done = records.filter(r=>r.status==='已销号').length;
   document.getElementById('stats-grid').innerHTML = [
     `<div class="stat-card" onclick="goToFilteredList({})"><div class="label">隐患总数</div><div class="value" style="color:#4a3fb5">${total}</div><div style="font-size:10px;color:#aaa">累计上报</div></div>`,
-    `<div class="stat-card" onclick="goToFilteredList({status:'待审核'})"><div class="label">待审核</div><div class="value" style="color:#2563eb">${pending}</div><div style="font-size:10px;color:#aaa">村已上报，待镇定级</div></div>`,
     `<div class="stat-card" onclick="goToFilteredList({level:'1'})"><div class="label">一级（重大）</div><div class="value" style="color:#dc2626">${lv1}</div><div style="font-size:10px;color:#aaa">需立即处置</div></div>`,
     `<div class="stat-card" onclick="goToFilteredList({status:'处置中'})"><div class="label">处置中</div><div class="value" style="color:#d97706">${proc}</div><div style="font-size:10px;color:#aaa">正在整改</div></div>`,
-    `<div class="stat-card" onclick="goToFilteredList({status:'已销号'})"><div class="label">已销号</div><div class="value" style="color:#16a34a">${done}</div><div style="font-size:10px;color:#aaa">完成验收</div></div>`,
+    `<div class="stat-card" onclick="goToFilteredList({status:'已销号'})"><div class="label">已销号</div><div class="value" style="color:#16a34a">${done}</div><div style="font-size:10px;color:#aaa">完成处置</div></div>`,
   ].join('');
 
   // 村进度
@@ -750,16 +734,6 @@ function fn_renderList(){
   }
   pg += `<button ${curPage>=pages?'disabled':''} onclick="curPage++;fn_renderList()">下一页</button>`;
   document.getElementById('list-pager').innerHTML = pg;
-}
-
-/* ==================== 待审核 ==================== */
-function fn_renderPending(){
-  const recs = MR().filter(r=>r.status==='待审核');
-  document.getElementById('pending-body').innerHTML = recs.length ? recs.map(r=>`<tr>
-    <td class="id-cell">${r.id}</td><td>${r.date}</td><td>${r.village}</td><td>${r.loc}</td>
-    <td style="max-width:180px">${r.desc}</td><td>${r.reporter||'—'}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">审核定级</button></td>
-  </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:#aaa">暂无待审核隐患</td></tr>';
 }
 
 /* ==================== 统计 ==================== */
@@ -860,17 +834,15 @@ function openAdd(){
   editId = null;
   pendingPhotos = [];
   document.getElementById('modal-title').textContent='新增隐患上报';
-  document.getElementById('level-section').style.display='none';
+  document.getElementById('level-section').style.display='block';
   document.getElementById('m-date').value = todayStr();
   ['m-village','m-type','m-loc','m-desc','m-reporter','m-phone'].forEach(f=>{
     const el=document.getElementById(f);
     if(el.tagName==='SELECT') el.selectedIndex=0; else el.value='';
   });
   renderPhotoThumbs();
-  if(currentUser.role==='village'){
-    document.getElementById('m-village').value=currentUser.village;
-    document.getElementById('m-village').disabled=true;
-  }
+  document.getElementById('m-level').value=3;
+  document.getElementById('m-status').value='处置中';
   M.open('addModal');
   
   // 移动端优化：滚动到顶部
@@ -925,7 +897,7 @@ function openEdit(id){
     document.getElementById('m-dept').value=r.dept||'';
     document.getElementById('m-owner').value=r.owner||'';
     document.getElementById('m-opinion').value=r.opinion||'';
-    document.getElementById('m-status').value=r.status||'待审核';
+    document.getElementById('m-status').value=r.status||'处置中';
   }
   
   M.open('addModal');
