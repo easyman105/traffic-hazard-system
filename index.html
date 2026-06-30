@@ -337,28 +337,71 @@ tr:hover td{background:#fafafe}
 
   <!-- 系统设置 -->
   <div class="page" id="page-settings">
+
+    <!-- 管理员信息 -->
     <div class="card">
-      <div class="card-title">系统设置</div>
-      <div style="font-size:13px;line-height:2">
-        <div style="margin-bottom:16px">
-          <b>修改密码</b>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-            <input type="password" id="old-pwd" placeholder="当前密码" style="padding:6px 10px;border:1px solid #d0d0d8;border-radius:7px;font-size:13px;width:140px">
-            <input type="password" id="new-pwd" placeholder="新密码" style="padding:6px 10px;border:1px solid #d0d0d8;border-radius:7px;font-size:13px;width:140px">
-            <button class="btn btn-primary btn-sm" onclick="changePwd()">修改</button>
-          </div>
+      <div class="card-title">管理员信息</div>
+      <div style="padding:12px 0">
+        <div style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">管理员名称</label>
+          <input type="text" id="admin-name" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入管理员名称">
         </div>
-        <div style="margin-bottom:16px">
-          <b>数据备份 / 恢复</b>
-          <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-sm" onclick="backupData()">📤 导出备份文件</button>
-            <button class="btn btn-sm" onclick="document.getElementById('restore-file').click()">📥 从备份文件恢复</button>
-            <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
-          </div>
-          <div style="font-size:11px;color:#888;margin-top:6px">备份文件包含所有隐患记录、账号和日志。建议定期备份。</div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">登录用户名</label>
+          <input type="text" id="admin-user" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入登录用户名">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">登录密码</label>
+          <input type="password" id="admin-pass" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入新密码（留空则不修改）">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveAdminInfo()">保存管理员信息</button>
+      </div>
+    </div>
+
+    <!-- 村名管理 -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">村名管理</div>
+      <div style="padding:12px 0">
+        <div style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">选择要修改的村</label>
+          <select id="rename-village-select" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px">
+            <option value="">请选择村</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">新名称</label>
+          <input type="text" id="rename-village-new" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入新的村名">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveVillageRename()">修改村名</button>
+        <div style="font-size:11px;color:#888;margin-top:8px">修改村名后，所有相关记录会自动更新。</div>
+      </div>
+    </div>
+
+    <!-- 修改密码 -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">修改密码</div>
+      <div style="padding:12px 0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="password" id="old-pwd" placeholder="当前密码" style="padding:6px 10px;border:1px solid #d0d0d8;border-radius:7px;font-size:13px;width:140px">
+          <input type="password" id="new-pwd" placeholder="新密码" style="padding:6px 10px;border:1px solid #d0d0d8;border-radius:7px;font-size:13px;width:140px">
+          <button class="btn btn-primary btn-sm" onclick="changePwd()">修改密码</button>
         </div>
       </div>
     </div>
+
+    <!-- 数据备份/恢复 -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">数据备份 / 恢复</div>
+      <div style="padding:12px 0">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="btn btn-sm" onclick="backupData()">📤 导出备份文件</button>
+          <button class="btn btn-sm" onclick="document.getElementById('restore-file').click()">📥 从备份文件恢复</button>
+          <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
+        </div>
+        <div style="font-size:11px;color:#888">备份文件包含所有隐患记录、账号和日志。建议定期备份。</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 操作日志 -->
@@ -403,7 +446,7 @@ tr:hover td{background:#fafafe}
     <div class="form-g"><label>联系电话</label><input type="text" id="m-phone"></div>
   </div>
   <div id="level-section" style="display:none;margin-top:10px;padding-top:10px;border-top:2px solid #f0f0f5">
-    <div style="font-size:12px;font-weight:600;color:#4a3fb5;margin-bottom:8px">镇级审核 · 分类定级</div>
+    <div style="font-size:12px;font-weight:600;color:#4a3fb5;margin-bottom:8px">隐患等级与处置信息</div>
     <div class="form-row">
       <div class="form-g"><label>安全等级 *</label><select id="m-level"><option value="1">一级（重大）</option><option value="2">二级（较大）</option><option value="3">三级（一般）</option></select></div>
       <div class="form-g"><label>整改期限</label><input type="date" id="m-deadline"></div>
@@ -434,7 +477,7 @@ tr:hover td{background:#fafafe}
   <div id="view-content"></div>
   <div class="form-actions">
     <button class="btn" onclick="M.closeModal('viewModal')">关闭</button>
-    <button class="btn btn-primary" id="btn-edit">编辑/审核</button>
+    <button class="btn btn-primary" id="btn-edit">编辑/操作</button>
   </div>
 </div>
 </div>
@@ -458,7 +501,8 @@ function MC(){ return LS('hz_current_user')||null }
 
 /* ==================== 账号系统 ==================== */
 // 11个村（上报时选择，不再作为独立账号）
-const VILLAGES = ['梅林村','桂花村','青竹村','石桥村','茶山村','枫树村','清水村','莲塘村','杨柳村','槐树村','松岭村'];
+// 村名列表（支持从 localStorage 读取自定义名称）
+let VILLAGES = LS('hz_villages') || ['梅林村','桂花村','青竹村','石桥村','茶山村','枫树村','清水村','莲塘村','杨柳村','槐树村','松岭村'];
 
 function initAccounts(){
   let accts = MA();
@@ -508,9 +552,16 @@ function doLogin(){
   var u = document.getElementById('login-user').value;
   var p = document.getElementById('login-pass').value;
   
-  // 简单的账号密码检查
-  if(u === 'admin' && p === 'admin123'){
-    var user = {user:'admin', pass:'admin123', role:'town', name:'东富镇管理员', village:''};
+  // 从 localStorage 读取账号信息
+  const accts = MA();
+  if(accts.length === 0){
+    alert('系统错误：未找到账号信息');
+    return;
+  }
+
+  const admin = accts[0];
+  if(u === admin.user && p === admin.pass){
+    var user = {user:admin.user, pass:admin.pass, role:'town', name:admin.name, village:''};
     localStorage.setItem('hz_current_user', JSON.stringify(user));
     
     document.getElementById('login-page').style.display='none';
@@ -538,6 +589,150 @@ function doLogout(){
   document.getElementById('login-err').style.display='none';
 }
 
+
+/* ==================== 管理员信息修改 ==================== */
+function loadAdminInfo(){
+  const accts = MA();
+  if(accts.length > 0){
+    const admin = accts[0];
+    document.getElementById('admin-name').value = admin.name || '';
+    document.getElementById('admin-user').value = admin.user || '';
+  }
+
+  // 加载村名下拉框
+  const sel = document.getElementById('rename-village-select');
+  if(sel){
+    sel.innerHTML = '<option value="">请选择村</option>';
+    VILLAGES.forEach(v => {
+      sel.innerHTML += '<option value="' + v + '">' + v + '</option>';
+    });
+  }
+}
+
+function saveAdminInfo(){
+  const newName = document.getElementById('admin-name').value.trim();
+  const newUser = document.getElementById('admin-user').value.trim();
+  const newPass = document.getElementById('admin-pass').value.trim();
+
+  if(!newName){
+    alert('请输入管理员名称');
+    return;
+  }
+  if(!newUser){
+    alert('请输入登录用户名');
+    return;
+  }
+
+  const accts = MA();
+  if(accts.length === 0){
+    alert('账号数据异常');
+    return;
+  }
+
+  // 检查用户名是否重复（如果修改了用户名）
+  if(newUser !== accts[0].user){
+    const exists = accts.find(a => a.user === newUser);
+    if(exists){
+      alert('用户名已存在，请换一个');
+      return;
+    }
+  }
+
+  // 更新账号信息
+  accts[0].name = newName;
+  accts[0].user = newUser;
+  if(newPass){
+    accts[0].pass = newPass;
+  }
+
+  MAP(accts);
+
+  // 更新当前登录用户信息
+  if(currentUser){
+    currentUser.name = newName;
+    currentUser.user = newUser;
+    if(newPass){
+      currentUser.pass = newPass;
+    }
+    LS('hz_current_user', currentUser);
+
+    // 更新右上角显示
+    document.getElementById('display-name').textContent = newName;
+  }
+
+  alert('管理员信息已保存！' + (newPass ? '\n密码已修改，下次登录请使用新密码。' : ''));
+  addLog('修改管理员信息', '管理员名称：' + newName + '，用户名：' + newUser);
+}
+
+function saveVillageRename(){
+  const oldName = document.getElementById('rename-village-select').value;
+  const newName = document.getElementById('rename-village-new').value.trim();
+
+  if(!oldName){
+    alert('请选择要修改的村');
+    return;
+  }
+  if(!newName){
+    alert('请输入新的村名');
+    return;
+  }
+  if(oldName === newName){
+    alert('新名称与旧名称相同');
+    return;
+  }
+
+  if(!confirm('确定将 "' + oldName + '" 改为 "' + newName + '"？\n这将会更新所有相关记录。')){
+    return;
+  }
+
+  // 更新 VILLAGES 数组
+  const idx = VILLAGES.indexOf(oldName);
+  if(idx === -1){
+    alert('找不到该村');
+    return;
+  }
+
+  // 检查新名称是否已存在
+  if(VILLAGES.includes(newName)){
+    alert('新名称已存在');
+    return;
+  }
+
+  VILLAGES[idx] = newName;
+
+  // 保存到 localStorage
+  LS('hz_villages', VILLAGES);
+
+  // 更新所有记录中的村名
+  const records = MR();
+  let updatedCount = 0;
+  records.forEach(r => {
+    if(r.village === oldName){
+      r.village = newName;
+      updatedCount++;
+    }
+  });
+  MS(records);
+
+  // 更新账号中的村名（如果有）
+  const accts = MA();
+  accts.forEach(a => {
+    if(a.village === oldName){
+      a.village = newName;
+    }
+  });
+  MAP(accts);
+
+  // 刷新下拉框
+  loadAdminInfo();
+
+  // 刷新界面
+  buildUI();
+
+  alert('村名已修改！\n共更新 ' + updatedCount + ' 条记录。');
+  addLog('修改村名', oldName + ' -> ' + newName + '，更新' + updatedCount + '条记录');
+}
+
 /* ==================== 构建界面 ==================== */
 let currentUser = null;
 function buildUI(){
@@ -545,7 +740,7 @@ function buildUI(){
   if(!currentUser) return;
   document.getElementById('display-name').textContent = currentUser.name;
   const rb = document.getElementById('role-badge');
-  rb.textContent = '东富镇管理员';
+  rb.textContent = '管理员';
   rb.className = 'role-badge role-town';
   
   // 导航（只有一个账号，直接显示所有功能）
@@ -571,13 +766,51 @@ function buildUI(){
     mv.innerHTML += `<option value="${v}">${v}</option>`;
   });
   
-  // 导出按钮 + 新增上报按钮
+  // 导出按钮 + 新增隐患记录按钮
   document.getElementById('export-btns').innerHTML = `<button class="btn btn-primary btn-sm" onclick="exportExcel()">导出Excel</button> <button class="btn btn-sm" onclick="exportCSV()">导出CSV</button>`;
-  document.getElementById('add-btn-place').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAdd()">+ 新增上报</button>`;
+  document.getElementById('add-btn-place').innerHTML = `<button class="btn btn-primary btn-sm" onclick="openAdd()">+ 新增隐患记录</button>`;
   
   loadData(true);
   buildBottomNav();
   
+  // 在顶部添加"新增隐患登记"按钮（桌面版）
+  const topBar = document.querySelector('.topbar');
+  if(topBar && !document.getElementById('top-add-btn')){
+    const addBtn = document.createElement('button');
+    addBtn.id = 'top-add-btn';
+    addBtn.className = 'btn btn-primary btn-sm';
+    addBtn.innerHTML = '+ 新增隐患登记';
+    addBtn.onclick = openAdd;
+    addBtn.style.marginLeft = 'auto';
+    topBar.insertBefore(addBtn, topBar.querySelector('.user-info'));
+  }
+
+  // 添加快速操作按钮（概览页面）
+  setTimeout(()=>{
+    const dashboardPage = document.getElementById('page-dashboard');
+    if(dashboardPage && !document.getElementById('quick-actions')){
+      const quickActions = document.createElement('div');
+      quickActions.id = 'quick-actions';
+      quickActions.className = 'card';
+      quickActions.style.marginTop = '16px';
+      quickActions.innerHTML = `
+        <div class="card-title">快速操作</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;padding:12px 0">
+          <button class="btn btn-primary" onclick="openAdd()" style="padding:12px 24px;font-size:14px">
+            + 新增隐患登记
+          </button>
+          <button class="btn btn-sm" onclick="switchPage('list')" style="padding:12px 24px;font-size:14px">
+            📋 查看台账
+          </button>
+          <button class="btn btn-sm" onclick="switchPage('stats')" style="padding:12px 24px;font-size:14px">
+            📈 统计报表
+          </button>
+        </div>
+      `;
+      dashboardPage.appendChild(quickActions);
+    }
+  }, 500);
+
   // 添加微信访问按钮
   setTimeout(()=>{
     if(document.getElementById('wechat-btn')) return;
@@ -608,9 +841,8 @@ function buildBottomNav(){
   const items = [
     {id:'dashboard', icon:'📊', text:'概览'},
     {id:'list', icon:'📋', text:'台账'},
-    {id:'pending', icon:'⏳', text:'处置中'},
     {id:'stats', icon:'📈', text:'统计'},
-    {id:'more', icon:'☰', text:'更多'}
+    {id:'settings', icon:'⚙️', text:'设置'}
   ];
 
   nav.innerHTML = items.map(item => {
@@ -668,7 +900,7 @@ function switchPage(tab){
   if(tab==='stats') fn_renderStats();
   if(tab==='dashboard') fn_renderDashboard();
   if(tab==='logs') renderLogs();
-  if(tab==='settings'){} // 设置页无需额外渲染
+  if(tab==='settings'){ loadAdminInfo(); } // 加载管理员信息
   // 更新底部导航
   updateBottomNav(tab);
 }
@@ -760,7 +992,7 @@ function fn_renderList(){
     <td>${r.level?`<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>`:'<span style="color:#aaa;font-size:11px">待定级</span>'}</td>
     <td><span class="badge ${STATUS_C[r.status]}">${r.status}</span></td>
     <td>${r.owner||'<span style="color:#aaa">—</span>'}</td>
-    <td>${r.photos&&r.photos.length?`<span style="font-size:11px;color:#4a3fb5">📷${r.photos.length}</span>&nbsp;`:''}${isTown?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">审核</button>`:(r.village===currentUser.village&&r.status==='处置中'?'<button class="btn btn-sm" onclick="event.stopPropagation();openEdit(\''+r.id+'\')">编辑</button>':'<button class="btn btn-sm" onclick="event.stopPropagation();viewRecord(\''+r.id+'\')">查看</button>')}</td>
+    <td>${r.photos&&r.photos.length?`<span style="font-size:11px;color:#4a3fb5">📷${r.photos.length}</span>&nbsp;`:''}${isTown?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">操作</button>`:(r.village===currentUser.village&&r.status==='处置中'?'<button class="btn btn-sm" onclick="event.stopPropagation();openEdit(\''+r.id+'\')">编辑</button>':'<button class="btn btn-sm" onclick="event.stopPropagation();viewRecord(\''+r.id+'\')">查看</button>')}</td>
   </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:#aaa">暂无匹配记录</td></tr>';
 
   let pg = `<span style="color:#888;font-size:11px">共${total}条</span>`;
@@ -909,7 +1141,7 @@ function openEdit(id){
   
   // 根据角色设置标题和可见区域
   if(currentUser.role==='town'){
-    document.getElementById('modal-title').textContent=`镇级审核定级 — ${r.id}`;
+    document.getElementById('modal-title').textContent=`编辑隐患记录 — ${r.id}`;
     document.getElementById('level-section').style.display='block';
   } else {
     document.getElementById('modal-title').textContent=`编辑隐患记录 — ${r.id}`;
@@ -927,7 +1159,7 @@ function openEdit(id){
   
   renderPhotoThumbs();
   
-  // 镇管理员可以看到并编辑审核相关字段
+  // 镇管理员可以看到并编辑操作相关字段
   if(currentUser.role==='town'){
     document.getElementById('m-level').value=r.level||1;
     document.getElementById('m-deadline').value=r.deadline||'';
@@ -968,7 +1200,7 @@ function saveRecord(){
     MS(records);
     if(statusChange) addLog('状态变更',`${records[idx].id} 状态从「${old.status}」变更为「${v.status}」`);
     if(levelChange) addLog('等级变更',`${records[idx].id} 评级为 ${LEVEL_T[v.level]}`);
-    else if(!levelChange) addLog('更新',`${editId} 审核信息已更新`);
+    else if(!levelChange) addLog('更新',`${editId} 信息已更新`);
   } else {
     v.id = genId(records);
     v.created = v.date;
@@ -1028,7 +1260,7 @@ function viewRecord(id){
     </div></div>`;
   }
   const tl = [{t:r.created,e:r.village+'上报隐患，上报人：'+r.reporter}];
-  if(r.level) tl.push({t:r.date,e:`镇级审核定级：<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>，分配至 ${r.dept||'相关部门'}`});
+  if(r.level) tl.push({t:r.date,e:`定级为：<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>，分配至 ${r.dept||'相关部门'}`});
   if(r.status==='处置中') tl.push({t:r.deadline||'进行中',e:'隐患处置中'});
   if(r.status==='待验收') tl.push({t:r.deadline||'-',e:'处置完成，等待验收销号'});
   if(r.status==='已销号') tl.push({t:r.deadline||'-',e:'验收通过，正式销号'});
