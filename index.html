@@ -2185,8 +2185,18 @@ function exportExcel(){
   const headers = ['编号','上报日期','所在村','隐患类型','隐患地点','隐患描述','上报人','联系电话','安全等级','整改期限','责任单位','责任人','处置意见','状态'];
   const rows = data.map(r=>[r.id,r.date,r.village,r.type,r.loc,r.desc,r.reporter||'',r.phone||'',
     r.level?LEVEL_T[r.level]:'未定级',r.deadline||'',r.dept||'',r.owner||'',r.opinion||'',r.status]);
-  const ws_data = [headers].concat(rows);
+  // 标题行和日期行
+  const now = new Date();
+  const dateStr = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日';
+  const ws_data = [
+    ['东富镇道路交通安全隐患台账'],
+    ['导出日期：'+dateStr],
+    [''],
+    headers
+  ].concat(rows);
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  // 合并标题行（跨所有列）
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:headers.length-1}}];
   ws['!cols'] = headers.map((h,i)=>{
     if(i===4||i===5) return {wch:30};
     if(i===12) return {wch:28};
