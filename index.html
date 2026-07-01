@@ -205,9 +205,15 @@ tr:hover td{background:#fafafe}
 .sync-card .sync-msg.ok{background:#dcfce7;color:#166534;display:block}
 .sync-card .sync-msg.err{background:#fef2f2;color:#991b1b;display:block}
 .sync-card .sync-msg.info{background:#e0f2fe;color:#075985;display:block}
+.sync-card .sync-status-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 10px;border-radius:6px;font-size:12px;flex-wrap:wrap}
+.sync-card .sync-status-row.found{background:#dcfce7;color:#166534}
+.sync-card .sync-status-row.notfound{background:#fef3c7;color:#b45309}
+.sync-card .sync-status-row #sync-gist-status-text{flex:1;min-width:200px;font-size:11px;line-height:1.5}
 @media(max-width:768px){
   .sync-card .sync-row{flex-direction:column;align-items:stretch}
   .sync-card .sync-row input{min-width:0}
+  .sync-card .sync-status-row{flex-direction:column;align-items:stretch}
+  .sync-card .sync-status-row #sync-gist-status-text{min-width:0}
 }
 
 .log-line{font-size:11px;padding:5px 8px;border-bottom:1px solid #f5f5fa;line-height:1.6;display:flex;align-items:center;gap:8px}
@@ -529,6 +535,10 @@ tr:hover td{background:#fafafe}
         <input type="password" id="sync-token" placeholder="粘贴 GitHub Token（ghp_xxx...），已保存则自动填充">
         <button class="btn-sync primary" onclick="saveSyncToken()">💾 保存 Token</button>
         <button class="btn-sync warn" onclick="clearSyncToken()">清除</button>
+      </div>
+      <div class="sync-status-row" id="sync-status-row" style="display:none">
+        <span id="sync-gist-status-text"></span>
+        <button class="btn-sync" onclick="discoverGist()" id="btn-rediscover" style="font-size:11px;padding:4px 10px">🔄 重新发现</button>
       </div>
       <div class="sync-actions">
         <button class="btn-sync primary" onclick="syncUpload()" id="btn-sync-up">📤 上传到云端</button>
@@ -1920,6 +1930,55 @@ var SYNC_TOKEN_KEY = 'hz_sync_token';
 function getSyncToken(){ return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
 function getSyncGistId(){ return localStorage.getItem(SYNC_GIST_ID_KEY) || ''; }
 
+// 自动发现已有的云端 Gist（根据描述匹配）
+function discoverGist(onComplete){
+  var tok = getSyncToken();
+  if(!tok){ showSyncMsg('请先保存 GitHub Token', 'err'); if(onComplete) onComplete(false); return; }
+
+  showSyncMsg('正在搜索云端数据...', 'info');
+  document.getElementById('sync-status-row').style.display = 'flex';
+  var txt = document.getElementById('sync-gist-status-text');
+  txt.textContent = '🔍 正在搜索您的 GitHub Gist...';
+  document.getElementById('sync-status-row').className = 'sync-status-row';
+
+  fetch('https://api.github.com/gists?per_page=100', {
+    headers: { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json' }
+  })
+  .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, status:r.status, data:j}; }); })
+  .then(function(res){
+    if(!res.ok){
+      var msg = res.data.message || '请求失败';
+      if(res.status === 401) msg = 'Token 无效或已过期，请重新生成';
+      showSyncMsg('搜索失败: ' + msg, 'err');
+      updateSyncGistStatus('');
+      if(onComplete) onComplete(false);
+      return;
+    }
+    // 按描述匹配
+    var found = null;
+    (res.data||[]).forEach(function(g){
+      if(g.description && g.description.indexOf('东富镇交通隐患台账') >= 0 && g.files && g.files['东富镇交通隐患数据.json']){
+        found = g;
+      }
+    });
+    if(found){
+      localStorage.setItem(SYNC_GIST_ID_KEY, found.id);
+      showSyncMsg('✅ 已自动发现云端数据！上次同步: ' + (found.updated_at||'未知'), 'ok');
+      updateSyncGistStatus(found.id);
+      if(onComplete) onComplete(true, found);
+    } else {
+      showSyncMsg('未找到已有同步数据。如果你之前上传过，请检查是否用了同一个 GitHub 账号', 'info');
+      updateSyncGistStatus('');
+      if(onComplete) onComplete(false);
+    }
+  })
+  .catch(function(err){
+    showSyncMsg('网络错误: ' + err.message, 'err');
+    updateSyncGistStatus('');
+    if(onComplete) onComplete(false);
+  });
+}
+
 function showSyncMsg(msg, type){
   var el = document.getElementById('sync-msg');
   el.className = 'sync-msg ' + type;
@@ -1929,9 +1988,28 @@ function showSyncMsg(msg, type){
 
 function initSyncUI(){
   var tok = getSyncToken();
+  var gid = getSyncGistId();
   if(tok){
     document.getElementById('sync-token').value = tok;
     document.getElementById('sync-token').placeholder = 'Token 已保存 ✓';
+    updateSyncGistStatus(gid);
+  } else {
+    document.getElementById('sync-status-row').style.display = 'none';
+  }
+}
+
+// 更新 Gist 连接状态显示
+function updateSyncGistStatus(gistId){
+  var row = document.getElementById('sync-status-row');
+  var txt = document.getElementById('sync-gist-status-text');
+  if(gistId){
+    row.style.display = 'flex';
+    row.className = 'sync-status-row found';
+    txt.textContent = '✅ 已连接云端 — Gist ID: ' + gistId.substring(0,8) + '...';
+  } else {
+    row.style.display = 'flex';
+    row.className = 'sync-status-row notfound';
+    txt.textContent = '⚠️ 尚未连接云端数据。请点击下方"🔍 自动发现"，或从已有设备的设置页复制 Gist ID 后手动粘贴。';
   }
 }
 
@@ -1945,7 +2023,14 @@ function saveSyncToken(){
   }
   localStorage.setItem(SYNC_TOKEN_KEY, tok);
   document.getElementById('sync-token').placeholder = 'Token 已保存 ✓';
-  showSyncMsg('Token 已保存！现在可以上传/下载数据了', 'ok');
+  // 保存后自动尝试发现已有的云端 Gist
+  discoverGist(function(success){
+    if(success){
+      showSyncMsg('Token 已保存，云端数据已自动连接！现在可以下载了', 'ok');
+    } else {
+      showSyncMsg('Token 已保存。云端未发现已有数据，请先在已有设备上执行"上传到云端"', 'info');
+    }
+  });
 }
 
 function clearSyncToken(){
@@ -2022,6 +2107,7 @@ function syncUpload(){
     }
     if(!gistId){
       localStorage.setItem(SYNC_GIST_ID_KEY, res.data.id);
+      updateSyncGistStatus(res.data.id);
     }
     showSyncMsg('✅ 上传成功！' + new Date().toLocaleTimeString() + ' — 共 ' + data.records.length + ' 条记录', 'ok');
     addLog('云同步上传', '上传 ' + data.records.length + ' 条记录到云端');
@@ -2073,8 +2159,19 @@ function syncDownload(){
   var tok = getSyncToken();
   var gistId = getSyncGistId();
 
+  if(!tok){ showSyncMsg('请先保存 GitHub Token', 'err'); return; }
+
   if(!gistId){
-    showSyncMsg('尚未上传过数据，请先执行"上传到云端"创建同步', 'err');
+    // 新设备无 Gist ID → 先尝试自动发现
+    showSyncMsg('正在搜索云端数据...', 'info');
+    discoverGist(function(success){
+      if(success){
+        // 发现成功，重新调用下载
+        syncDownload();
+      } else {
+        showSyncMsg('未找到云端数据，请确认：1. 使用的是同一 GitHub 账号 2. 原设备已上传过数据', 'err');
+      }
+    });
     return;
   }
 
