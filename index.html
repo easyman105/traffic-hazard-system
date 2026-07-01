@@ -639,6 +639,10 @@ function MA(){ return LS('hz_accounts')||[] }
 function MAP(v){ LS('hz_accounts',v) }
 function MC(){ return LS('hz_current_user')||null }
 
+function isMobile(){
+  return /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || window.innerWidth <= 768;
+}
+
 /* ==================== 账号系统 ==================== */
 // 11个村（上报时选择，不再作为独立账号）
 // 村名列表（支持从 localStorage 读取自定义名称）
@@ -704,17 +708,34 @@ function doLogin(){
   if(p === admin.pass){
     var user = {user:admin.user, pass:admin.pass, role:'town', name:admin.name, village:''};
     localStorage.setItem('hz_current_user', JSON.stringify(user));
-    
-    document.getElementById('login-page').style.display='none';
-    document.getElementById('app').style.display='';
-    
+
     // 初始化数据（如果还没有）
     initAccounts();
     initRecords();
-    
-    buildUI();
+
+    // 手机端：登录后自动从云端同步最新数据
+    if(isMobile() && getSyncToken() && getSyncGistId()){
+      showLoginLoading('正在从云端同步最新数据...');
+      silentSyncDownload(function(success, data){
+        if(success){
+          addLog('自动云同步', '手机端登录后自动同步 ' + data.records.length + ' 条记录');
+        }
+        // 无论成功与否，都继续进入系统
+        document.getElementById('login-page').style.display='none';
+        document.getElementById('app').style.display='';
+        buildUI();
+      });
+    } else {
+      document.getElementById('login-page').style.display='none';
+      document.getElementById('app').style.display='';
+      buildUI();
+    }
   } else {
-    document.getElementById('login-err').style.display='block';
+    var el = document.getElementById('login-err');
+    el.style.display='block';
+    el.style.color='';
+    el.style.background='';
+    el.textContent = '密码错误，请重试';
     document.getElementById('login-pass').value='';
   }
 }
@@ -2008,6 +2029,43 @@ function syncUpload(){
   .catch(function(err){
     showSyncMsg('网络错误: ' + err.message, 'err');
   });
+}
+
+// 登录时显示加载状态
+function showLoginLoading(msg){
+  var el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color = '#0891b2';
+  el.style.background = '#e0f2fe';
+}
+
+// 静默从云端下载（登录时自动触发，无确认弹窗）
+function silentSyncDownload(callback){
+  var gistId = getSyncGistId();
+
+  if(!gistId){ callback(false); return; }
+
+  fetch('https://api.github.com/gists/' + gistId, {
+    headers: { 'Accept': 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(gist){
+    var file = gist.files && gist.files['东富镇交通隐患数据.json'];
+    if(!file || !file.content){ callback(false); return; }
+    try { var data = JSON.parse(file.content); }
+    catch(e){ callback(false); return; }
+    if(!data.records || !data.accounts){ callback(false); return; }
+
+    MS(data.records);
+    MAP(data.accounts);
+    if(data.logs) MLP(data.logs);
+    if(data.villages) LS('hz_villages', data.villages);
+    if(data.seeded) localStorage.setItem('hz_seeded', data.seeded);
+    if(data.records && data.records.length>0) localStorage.setItem('hz_seeded', '1');
+    callback(true, data);
+  })
+  .catch(function(err){ callback(false); });
 }
 
 // 从云端下载
