@@ -184,6 +184,32 @@ tr:hover td{background:#fafafe}
 .log-toolbar .btn-log-danger:hover{background:#fce4e4}
 .log-toolbar .btn-log-primary{background:#eef2ff;color:#4a3fb5;border-color:#c7d2fe}
 .log-toolbar .btn-log-primary:hover{background:#e0e7ff}
+
+/* 云同步 */
+.sync-card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-top:12px}
+.sync-card h4{font-size:14px;font-weight:700;color:#0891b2;margin:0 0 4px 0;display:flex;align-items:center;gap:6px}
+.sync-card .sync-desc{font-size:11px;color:#666;line-height:1.6;margin-bottom:10px}
+.sync-card .sync-desc a{color:#0891b2}
+.sync-card .sync-desc code{background:#e0f2fe;padding:1px 5px;border-radius:3px;font-size:10px}
+.sync-card .sync-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sync-card .sync-row input{flex:1;min-width:180px;padding:7px 10px;border:1px solid #bae6fd;border-radius:6px;font-size:12px}
+.sync-card .sync-row input:focus{outline:none;border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.15)}
+.sync-card .sync-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sync-card .btn-sync{padding:6px 14px;border-radius:6px;border:1px solid #bae6fd;font-size:12px;cursor:pointer;background:#fff;color:#0891b2;transition:all .2s}
+.sync-card .btn-sync:hover{background:#e0f2fe}
+.sync-card .btn-sync.primary{background:#0891b2;color:#fff;border-color:#0891b2}
+.sync-card .btn-sync.primary:hover{background:#0e7490}
+.sync-card .btn-sync.warn{background:#fef3c7;color:#b45309;border-color:#fcd34d}
+.sync-card .btn-sync.warn:hover{background:#fde68a}
+.sync-card .sync-msg{font-size:11px;margin-top:8px;padding:6px 10px;border-radius:5px;display:none}
+.sync-card .sync-msg.ok{background:#dcfce7;color:#166534;display:block}
+.sync-card .sync-msg.err{background:#fef2f2;color:#991b1b;display:block}
+.sync-card .sync-msg.info{background:#e0f2fe;color:#075985;display:block}
+@media(max-width:768px){
+  .sync-card .sync-row{flex-direction:column;align-items:stretch}
+  .sync-card .sync-row input{min-width:0}
+}
+
 .log-line{font-size:11px;padding:5px 8px;border-bottom:1px solid #f5f5fa;line-height:1.6;display:flex;align-items:center;gap:8px}
 .log-line .lt{color:#aaa;white-space:nowrap}
 .log-line .lu{font-weight:600;white-space:nowrap}
@@ -489,6 +515,26 @@ tr:hover td{background:#fafafe}
         </div>
 
       </div>
+    </div>
+
+    <!-- 云同步 -->
+    <div class="card sync-card" style="margin-top:16px">
+      <h4>☁️ 数据云同步</h4>
+      <div class="sync-desc">
+        通过 <b>GitHub Gist</b> 实现 PC 和手机之间数据同步。首次使用需：
+        <br>1. 在 <a href="https://github.com/settings/tokens" target="_blank">GitHub Token 设置</a> 创建一个 Personal Access Token（勾选 <code>gist</code> 权限）
+        <br>2. 将 Token 粘贴到下方并保存
+      </div>
+      <div class="sync-row">
+        <input type="password" id="sync-token" placeholder="粘贴 GitHub Token（ghp_xxx...），已保存则自动填充">
+        <button class="btn-sync primary" onclick="saveSyncToken()">💾 保存 Token</button>
+        <button class="btn-sync warn" onclick="clearSyncToken()">清除</button>
+      </div>
+      <div class="sync-actions">
+        <button class="btn-sync primary" onclick="syncUpload()" id="btn-sync-up">📤 上传到云端</button>
+        <button class="btn-sync" onclick="syncDownload()" id="btn-sync-down">📥 从云端下载</button>
+      </div>
+      <div class="sync-msg" id="sync-msg"></div>
     </div>
 
   </div>
@@ -1053,7 +1099,7 @@ function switchPage(tab){
   if(tab==='stats') fn_renderStats();
   if(tab==='dashboard') fn_renderDashboard();
   if(tab==='logs') renderLogs();
-  if(tab==='settings'){ loadAdminInfo(); } // 加载管理员信息
+  if(tab==='settings'){ loadAdminInfo(); initSyncUI(); } // 加载管理员信息和云同步 Token
   // 更新底部导航
   updateBottomNav(tab);
 }
@@ -1843,6 +1889,182 @@ function changePwd(){
   document.getElementById('new-pwd').value='';
   alert('密码修改成功！');
   addLog('修改密码', 'admin 密码已修改');
+}
+
+/* ==================== 云同步（GitHub Gist） ==================== */
+
+var SYNC_GIST_ID_KEY = 'hz_sync_gist_id';
+var SYNC_TOKEN_KEY = 'hz_sync_token';
+
+function getSyncToken(){ return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
+function getSyncGistId(){ return localStorage.getItem(SYNC_GIST_ID_KEY) || ''; }
+
+function showSyncMsg(msg, type){
+  var el = document.getElementById('sync-msg');
+  el.className = 'sync-msg ' + type;
+  el.textContent = msg;
+  setTimeout(function(){ el.className = 'sync-msg'; }, 5000);
+}
+
+function initSyncUI(){
+  var tok = getSyncToken();
+  if(tok){
+    document.getElementById('sync-token').value = tok;
+    document.getElementById('sync-token').placeholder = 'Token 已保存 ✓';
+  }
+}
+
+// 保存 GitHub Token
+function saveSyncToken(){
+  var tok = document.getElementById('sync-token').value.trim();
+  if(!tok){ showSyncMsg('请输入 GitHub Token', 'err'); return; }
+  if(!tok.startsWith('ghp_') && !tok.startsWith('github_pat_')){
+    showSyncMsg('Token 格式不正确，应以 ghp_ 或 github_pat_ 开头', 'err');
+    return;
+  }
+  localStorage.setItem(SYNC_TOKEN_KEY, tok);
+  document.getElementById('sync-token').placeholder = 'Token 已保存 ✓';
+  showSyncMsg('Token 已保存！现在可以上传/下载数据了', 'ok');
+}
+
+function clearSyncToken(){
+  if(!confirm('确定要清除已保存的 Token 和 Gist 链接吗？')) return;
+  localStorage.removeItem(SYNC_TOKEN_KEY);
+  localStorage.removeItem(SYNC_GIST_ID_KEY);
+  document.getElementById('sync-token').value = '';
+  document.getElementById('sync-token').placeholder = '粘贴 GitHub Token（ghp_xxx...）';
+  showSyncMsg('Token 和 Gist 链接已清除', 'info');
+}
+
+// 构建要同步的数据对象
+function buildSyncData(){
+  return {
+    app: '东富镇交通隐患台账',
+    version: 2,
+    syncTime: new Date().toLocaleString('zh-CN'),
+    records: MR(),
+    accounts: MA(),
+    logs: ML(),
+    villages: LS('hz_villages'),
+    seeded: localStorage.getItem('hz_seeded') || '',
+  };
+}
+
+// 上传到云端
+function syncUpload(){
+  var tok = getSyncToken();
+  if(!tok){ showSyncMsg('请先保存 GitHub Token', 'err'); return; }
+  var gistId = getSyncGistId();
+
+  showSyncMsg('正在上传数据到云端...', 'info');
+
+  var data = buildSyncData();
+  var content = JSON.stringify(data, null, 2);
+
+  var url, method, body;
+  if(gistId){
+    // 更新已有 Gist
+    url = 'https://api.github.com/gists/' + gistId;
+    method = 'PATCH';
+    body = JSON.stringify({
+      files: { '东富镇交通隐患数据.json': { content: content } }
+    });
+  } else {
+    // 创建新 Gist
+    url = 'https://api.github.com/gists';
+    method = 'POST';
+    body = JSON.stringify({
+      description: '东富镇交通隐患台账 — 数据云同步（自动生成，勿手动编辑）',
+      public: false,
+      files: { '东富镇交通隐患数据.json': { content: content } }
+    });
+  }
+
+  fetch(url, {
+    method: method,
+    headers: {
+      'Authorization': 'Bearer ' + tok,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: body
+  })
+  .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, status:r.status, data:j}; }); })
+  .then(function(res){
+    if(!res.ok){
+      var msg = res.data.message || '未知错误';
+      if(res.status === 401) msg = 'Token 无效或已过期，请重新生成';
+      if(res.status === 404) msg = '云端数据不存在，将重新创建';
+      if(res.status === 403 && msg.indexOf('rate limit')>=0) msg = 'API 请求次数超限，请稍后重试';
+      showSyncMsg('上传失败: ' + msg, 'err');
+      return;
+    }
+    if(!gistId){
+      localStorage.setItem(SYNC_GIST_ID_KEY, res.data.id);
+    }
+    showSyncMsg('✅ 上传成功！' + new Date().toLocaleTimeString() + ' — 共 ' + data.records.length + ' 条记录', 'ok');
+    addLog('云同步上传', '上传 ' + data.records.length + ' 条记录到云端');
+  })
+  .catch(function(err){
+    showSyncMsg('网络错误: ' + err.message, 'err');
+  });
+}
+
+// 从云端下载
+function syncDownload(){
+  var tok = getSyncToken();
+  var gistId = getSyncGistId();
+
+  if(!gistId){
+    showSyncMsg('尚未上传过数据，请先执行"上传到云端"创建同步', 'err');
+    return;
+  }
+
+  showSyncMsg('正在从云端下载数据...', 'info');
+
+  fetch('https://api.github.com/gists/' + gistId, {
+    headers: {
+      'Accept': 'application/vnd.github+json',
+      'Cache-Control': 'no-cache'
+    }
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(gist){
+    var file = gist.files && gist.files['东富镇交通隐患数据.json'];
+    if(!file || !file.content){
+      showSyncMsg('云端数据为空或格式不正确', 'err');
+      return;
+    }
+    try {
+      var data = JSON.parse(file.content);
+    } catch(e){
+      showSyncMsg('云端数据解析失败: ' + e.message, 'err');
+      return;
+    }
+    if(!data.records || !data.accounts){
+      showSyncMsg('云端数据格式不完整', 'err');
+      return;
+    }
+    // 确认恢复
+    var syncTime = data.syncTime || '未知';
+    if(!confirm('将用云端数据覆盖本地所有数据！\n\n云端版本时间: ' + syncTime + '\n隐患记录: ' + data.records.length + ' 条\n\n确定继续吗？')){
+      showSyncMsg('已取消下载', 'info');
+      return;
+    }
+    // 写入数据
+    MS(data.records);
+    MAP(data.accounts);
+    if(data.logs) MLP(data.logs);
+    if(data.villages) LS('hz_villages', data.villages);
+    if(data.seeded) localStorage.setItem('hz_seeded', data.seeded);
+    if(data.records && data.records.length>0) localStorage.setItem('hz_seeded', '1');
+    showSyncMsg('✅ 下载成功！' + data.records.length + ' 条记录已恢复，页面即将刷新...', 'ok');
+    addLog('云同步下载', '从云端下载 ' + data.records.length + ' 条记录');
+    setTimeout(function(){ location.reload(); }, 1500);
+  })
+  .catch(function(err){
+    showSyncMsg('网络错误: ' + err.message, 'err');
+  });
 }
 
 /* ==================== 数据备份 / 恢复 ==================== */
