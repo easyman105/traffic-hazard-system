@@ -103,6 +103,7 @@ tr:hover td{background:#fafafe}
 .st-doing{background:#fef3c7;color:#92400e}
 .st-verify{background:#ede9fe;color:#5b21b6}
 .st-done{background:#dcfce7;color:#166534}
+.st-pending{background:#e8e8f0;color:#6b6b80}
 
 /* 模态框 */
 .modal-mask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:20px}
@@ -123,12 +124,36 @@ tr:hover td{background:#fafafe}
 /* 图表 */
 .chart-flex{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center}
 .chart-svg{flex-shrink:0}
+.chart-svg path{cursor:pointer;transition:opacity .15s}
+.chart-svg path:hover{opacity:1!important}
 .chart-legend{flex:1;min-width:130px}
 .chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px;cursor:default}
 .chart-legend-item:hover{background:#f8f8fc;border-radius:4px;padding:0 4px}
 .chart-legend-dot{width:12px;height:12px;border-radius:3px;display:inline-block;flex-shrink:0}
 .chart-legend-num{margin-left:auto;color:#888;font-size:11px;white-space:nowrap}
-.chart-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.chart-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;padding:4px 6px;border-radius:6px;transition:background .15s}
+.chart-bar-row:hover{background:#f0f0f8}
+/* 可点击链接样式 */
+.ck-link{cursor:pointer;transition:all .15s}
+.ck-link:hover{background:#f0f0f8;border-radius:4px;padding:0 4px;margin:0 -4px;color:#4a3fb5}
+.ck-link-row{cursor:pointer;transition:background .15s}
+.ck-link-row:hover{background:#ede9fe!important}
+.overdue-row{cursor:pointer;transition:background .15s}
+.overdue-row:hover{background:#fef2f2!important}
+
+/* 村名管理 */
+.vm-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:4px;background:#f8f8fc;transition:background .15s;flex-wrap:wrap}
+.vm-row:hover{background:#eeeef8}
+.vm-name-wrap{flex:1;min-width:80px}
+.vm-name-display{font-size:13px;font-weight:600;color:#333}
+.vm-name-input{width:100%;padding:4px 8px;border:1px solid #4a3fb5;border-radius:4px;font-size:13px;outline:none}
+.vm-count{font-size:11px;color:#999;white-space:nowrap;min-width:50px}
+.vm-actions{display:flex;gap:6px;flex-shrink:0}
+.vm-btn-edit{color:#4a3fb5!important;border:1px solid #d0d0f0!important}
+.vm-btn-edit:hover{background:#f0f0ff!important}
+.vm-btn-del{color:#dc2626!important;border:1px solid #fdd!important}
+.vm-btn-del:hover{background:#fff0f0!important}
+
 .chart-bar-label{width:60px;text-align:right;flex-shrink:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chart-bar-track{flex:1;height:22px;background:#f0f0f5;border-radius:6px;overflow:hidden;position:relative;min-width:80px}
 .chart-bar-fill{height:100%;border-radius:6px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:10px;font-weight:600}
@@ -153,10 +178,20 @@ tr:hover td{background:#fafafe}
 .timeline li .ts{font-size:10px;color:#aaa}
 
 /* 日志 */
-.log-line{font-size:11px;padding:5px 8px;border-bottom:1px solid #f5f5fa;line-height:1.6}
-.log-line .lt{color:#aaa;margin-right:8px}
-.log-line .lu{font-weight:600;margin-right:6px}
-.log-line .la{color:#4a3fb5}
+.log-toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.log-toolbar .btn-log-act{padding:6px 14px;border-radius:6px;border:1px solid #d0d0d8;font-size:12px;cursor:pointer;background:#fff;color:#555;transition:all .2s}
+.log-toolbar .btn-log-act:hover{background:#f5f5fa}
+.log-toolbar .btn-log-danger{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.log-toolbar .btn-log-danger:hover{background:#fce4e4}
+.log-toolbar .btn-log-primary{background:#eef2ff;color:#4a3fb5;border-color:#c7d2fe}
+.log-toolbar .btn-log-primary:hover{background:#e0e7ff}
+.log-line{font-size:11px;padding:5px 8px;border-bottom:1px solid #f5f5fa;line-height:1.6;display:flex;align-items:center;gap:8px}
+.log-line .lt{color:#aaa;white-space:nowrap}
+.log-line .lu{font-weight:600;white-space:nowrap}
+.log-line .la{color:#4a3fb5;white-space:nowrap}
+.log-line .ld{flex:1;min-width:0}
+.log-line .btn-del-log{font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.log-line .btn-del-log:hover{background:#fce4e4}
 
 /* 账号管理 */
 .acct-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f5}
@@ -311,8 +346,20 @@ tr:hover td{background:#fafafe}
   <!-- 概览 -->
   <div class="page active" id="page-dashboard">
     <div class="stats-grid" id="stats-grid"></div>
-    <div class="card"><div class="card-title">各村处置进度</div><div class="village-grid" id="village-bars"></div></div>
-    <div class="card"><div class="card-title">近期隐患（未销号）</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="card"><div class="card-title">隐患类型分布</div><div id="db-chart-type"></div></div>
+      <div class="card"><div class="card-title">隐患等级分布</div><div id="db-chart-level"></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="card"><div class="card-title">处置状态分布</div><div id="db-chart-status"></div></div>
+      <div class="card"><div class="card-title">各村隐患数量</div><div id="db-chart-village-count"></div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px"><div class="card-title">各村处置进度</div><div id="db-chart-village"></div></div>
+    <div class="card" style="margin-top:12px"><div class="card-title">超期未处置（上报超30天）</div><div id="db-overdue-list"></div></div>
+
+    <div class="card" style="margin-top:12px"><div class="card-title">近期隐患（未销号）</div>
       <div class="tbl-wrap"><table><thead><tr><th>编号</th><th>村</th><th>类型</th><th>地点</th><th>等级</th><th>状态</th><th>日期</th></tr></thead><tbody id="recent-body"></tbody></table></div>
     </div>
   </div>
@@ -324,7 +371,7 @@ tr:hover td{background:#fafafe}
         <select id="f-village" onchange="fn_applyFilter()"><option value="">全部村</option></select>
         <select id="f-type" onchange="fn_applyFilter()"><option value="">全部类型</option><option>道路损毁</option><option>标志缺失</option><option>视距不良</option><option>隐患路段</option><option>设施缺失</option><option>其他</option></select>
         <select id="f-level" onchange="fn_applyFilter()"><option value="">全部等级</option><option value="1">一级</option><option value="2">二级</option><option value="3">三级</option></select>
-        <select id="f-status" onchange="fn_applyFilter()"><option value="">全部状态</option><option>处置中</option><option>待验收</option><option>已销号</option></select>
+        <select id="f-status" onchange="fn_applyFilter()"><option value="">全部状态</option><option>待审核</option><option>处置中</option><option>待验收</option><option>已销号</option></select>
         <input id="f-keyword" placeholder="搜索地点/描述" oninput="fn_applyFilter()">
         <span style="flex:1"></span>
         <span id="batch-btns" style="display:none;gap:6px;align-items:center">
@@ -375,10 +422,6 @@ tr:hover td{background:#fafafe}
           <input type="text" id="admin-name" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入管理员名称">
         </div>
         <div style="margin-bottom:12px">
-          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">登录用户名</label>
-          <input type="text" id="admin-user" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入登录用户名">
-        </div>
-        <div style="margin-bottom:12px">
           <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">登录密码</label>
           <input type="password" id="admin-pass" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入新密码（留空则不修改）">
         </div>
@@ -390,52 +433,59 @@ tr:hover td{background:#fafafe}
     <div class="card" style="margin-top:16px">
       <div class="card-title">村名管理</div>
       <div style="padding:12px 0">
-        <div style="margin-bottom:12px">
-          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">选择要修改的村</label>
-          <select id="rename-village-select" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px">
-            <option value="">请选择村</option>
-          </select>
+        <div class="village-mgmt-list" id="village-mgmt-list">
+          <!-- JS 动态渲染 -->
         </div>
-        <div style="margin-bottom:12px">
-          <label style="display:block;margin-bottom:4px;font-size:13px;color:#666">新名称</label>
-          <input type="text" id="rename-village-new" style="width:100%;padding:8px;border:1px solid #e8e8ec;border-radius:6px" placeholder="输入新的村名">
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <input type="text" id="new-village-input" style="flex:1;padding:8px 10px;border:1px solid #e0e0e8;border-radius:6px;font-size:13px" placeholder="输入新村名称，如：桃花村" onkeydown="if(event.key==='Enter')addVillage()">
+          <button class="btn btn-primary btn-sm" onclick="addVillage()" style="white-space:nowrap;padding:8px 14px">＋ 添加</button>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="saveVillageRename()">修改村名</button>
-        <div style="font-size:11px;color:#888;margin-top:8px">修改村名后，所有相关记录会自动更新。</div>
+        <div style="font-size:11px;color:#999;margin-top:8px">可直接点击村名编辑，也可删除。删除村前请确认该村已无隐患记录。</div>
       </div>
     </div>
 
-    <!-- 数据备份/恢复/导入 -->
+    <!-- 数据管理 -->
     <div class="card" style="margin-top:16px">
-      <div class="card-title">数据备份 / 恢复</div>
+      <div class="card-title">数据管理</div>
       <div style="padding:12px 0">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          <button class="btn btn-sm" onclick="backupData()">📤 导出备份文件</button>
-          <button class="btn btn-sm" onclick="document.getElementById('restore-file').click()">📥 从备份文件恢复</button>
-          <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
-        </div>
-        <div style="font-size:11px;color:#888">备份文件包含所有隐患记录、账号和日志。建议定期备份。</div>
-      </div>
-    </div>
 
-    <!-- 从Excel/CSV导入隐患记录 -->
-    <div class="card" style="margin-top:16px">
-      <div class="card-title">从 Excel / CSV 导入隐患记录</div>
-      <div style="padding:12px 0">
-        <div style="margin-bottom:10px;font-size:12px;color:#666;line-height:1.7">
-          <b>使用说明：</b><br>
-          1. 可先点击下方"下载导入模板"获取标准格式<br>
-          2. 按模板填写数据（<b>编号</b>列留空将自动生成）<br>
-          3. 安全等级填：一级（重大）/ 二级（较大）/ 三级（一般）/ 未定级<br>
-          4. 状态填：处置中 / 待验收 / 已销号<br>
-          5. 上报日期格式：2026-07-01
+        <!-- 系统备份 -->
+        <div style="background:#f8f7ff;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:#4a3fb5">系统备份与恢复</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <button class="btn btn-sm" onclick="backupData()">📤 导出完整备份</button>
+            <button class="btn btn-sm" onclick="document.getElementById('restore-file').click()">📥 从备份恢复</button>
+            <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
+          </div>
+          <div style="font-size:11px;color:#888">完整备份包含所有隐患记录、账号信息和操作日志，建议定期备份。恢复备份将覆盖当前全部数据。</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          <button class="btn btn-sm" onclick="downloadTemplate()">📋 下载导入模板</button>
-          <button class="btn btn-primary btn-sm" onclick="document.getElementById('import-file').click()">📁 选择Excel/CSV文件导入</button>
-          <input type="file" id="import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importRecords(event)">
+
+        <!-- 数据导出 -->
+        <div style="background:#f0fdf4;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:#16a34a">数据导出</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <button class="btn btn-sm" onclick="exportExcel()">📊 导出 Excel</button>
+            <button class="btn btn-sm" onclick="exportCSV()">📄 导出 CSV</button>
+          </div>
+          <div style="font-size:11px;color:#888">将隐患台账数据导出为 Excel 或 CSV 格式，可用于打印、存档或进一步分析。</div>
         </div>
-        <div id="import-result" style="display:none;margin-top:10px"></div>
+
+        <!-- 数据导入 -->
+        <div style="background:#fffbeb;border-radius:8px;padding:12px 14px">
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:#d97706">数据导入</div>
+          <div style="margin-bottom:8px;font-size:11px;color:#666;line-height:1.6">
+            1. 先下载导入模板，按格式填写数据<br>
+            2. <b>编号</b>留空将自动生成；安全等级填：一级（重大）/ 二级（较大）/ 三级（一般）/ 未定级<br>
+            3. 状态填：待审核 / 处置中 / 待验收 / 已销号；上报日期格式：2026-07-01
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <button class="btn btn-sm" onclick="downloadTemplate()">📋 下载导入模板</button>
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('import-file').click()">📁 选择 Excel/CSV 导入</button>
+            <input type="file" id="import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importRecords(event)">
+          </div>
+          <div id="import-result" style="display:none;margin-top:10px"></div>
+        </div>
+
       </div>
     </div>
 
@@ -445,6 +495,11 @@ tr:hover td{background:#fafafe}
   <div class="page" id="page-logs">
     <div class="card">
       <div class="card-title">操作日志</div>
+      <div class="log-toolbar">
+        <button class="btn-log-act btn-log-primary" onclick="exportLogs('csv')">导出 CSV</button>
+        <button class="btn-log-act btn-log-primary" onclick="exportLogs('json')">导出 JSON</button>
+        <button class="btn-log-act btn-log-danger" onclick="clearAllLogs()">删除全部日志</button>
+      </div>
       <div id="logs-content" style="max-height:500px;overflow-y:auto"></div>
     </div>
   </div>
@@ -494,7 +549,7 @@ tr:hover td{background:#fafafe}
     </div>
     <div class="form-row one"><div class="form-g"><label>处置意见</label><textarea id="m-opinion" placeholder="镇级处置建议、整改要求等"></textarea></div></div>
     <div class="form-row">
-      <div class="form-g"><label>状态</label><select id="m-status"><option>处置中</option><option>待验收</option><option>已销号</option></select></div>
+      <div class="form-g"><label>状态</label><select id="m-status"><option>待审核</option><option>处置中</option><option>待验收</option><option>已销号</option></select></div>
     </div>
   </div>
   <div class="form-actions">
@@ -524,7 +579,7 @@ tr:hover td{background:#fafafe}
 function getVillages(){ return VILLAGES; }
 const LEVEL_T  = {1:'一级（重大）',2:'二级（较大）',3:'三级（一般）'};
 const LEVEL_C  = {1:'lv1',2:'lv2',3:'lv3'};
-const STATUS_C = {'处置中':'st-doing','待验收':'st-verify','已销号':'st-done'};
+const STATUS_C = {'待审核':'st-pending','处置中':'st-doing','待验收':'st-verify','已销号':'st-done'};
 
 /* ==================== 数据持久化 ==================== */
 function LS(k,v){ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); localStorage.setItem(k,JSON.stringify(v)); }
@@ -555,7 +610,8 @@ function initAccounts(){
 /* ==================== 初始数据 ==================== */
 function initRecords(){
   let r = MR();
-  if(r.length===0){
+  // 仅首次使用时写入种子数据，之后即使清空也不恢复（避免删除后刷新又出现）
+  if(r.length===0 && !localStorage.getItem('hz_seeded')){
     r = [
       {id:'ZT-2026-001',date:'2026-05-10',village:'梅林村',type:'道路损毁',loc:'梅林村X013县道1.2km处',desc:'路面坑洼严重，影响车辆通行，长约30米，雨天积水严重',reporter:'张三 村安全员',phone:'138xxxx1234',level:1,deadline:'2026-06-10',dept:'镇道路养护站',owner:'李四',opinion:'立即设置警示标志，30日内完成路面修复',status:'处置中',created:'2026-05-10'},
       {id:'ZT-2026-002',date:'2026-05-15',village:'桂花村',type:'标志缺失',loc:'桂花村村口T型路口',desc:'交叉路口缺少减速让行标志，农用车穿行频繁，交通事故风险高',reporter:'王五 村委委员',phone:'139xxxx5678',level:2,deadline:'2026-06-15',dept:'镇交通所',owner:'赵六',opinion:'补设标志，同步排查周边路口',status:'待验收',created:'2026-05-15'},
@@ -567,6 +623,7 @@ function initRecords(){
       {id:'ZT-2026-008',date:'2026-06-25',village:'莲塘村',type:'其他',loc:'莲塘村农田路',desc:'部分村民占道晾晒粮食，消防应急车辆无法通行',reporter:'曹十五 安全员',phone:'132xxxx6677',level:null,deadline:null,dept:null,owner:null,opinion:null,status:'处置中',created:'2026-06-25'},
     ];
     MS(r);
+    localStorage.setItem('hz_seeded', '1');
   }
   return r;
 }
@@ -631,30 +688,18 @@ function loadAdminInfo(){
   if(accts.length > 0){
     const admin = accts[0];
     document.getElementById('admin-name').value = admin.name || '';
-    document.getElementById('admin-user').value = admin.user || '';
   }
 
-  // 加载村名下拉框
-  const sel = document.getElementById('rename-village-select');
-  if(sel){
-    sel.innerHTML = '<option value="">请选择村</option>';
-    VILLAGES.forEach(v => {
-      sel.innerHTML += '<option value="' + v + '">' + v + '</option>';
-    });
-  }
+  // 渲染村名管理列表
+  renderVillageList();
 }
 
 function saveAdminInfo(){
   const newName = document.getElementById('admin-name').value.trim();
-  const newUser = document.getElementById('admin-user').value.trim();
   const newPass = document.getElementById('admin-pass').value.trim();
 
   if(!newName){
     alert('请输入管理员名称');
-    return;
-  }
-  if(!newUser){
-    alert('请输入登录用户名');
     return;
   }
 
@@ -664,18 +709,8 @@ function saveAdminInfo(){
     return;
   }
 
-  // 检查用户名是否重复（如果修改了用户名）
-  if(newUser !== accts[0].user){
-    const exists = accts.find(a => a.user === newUser);
-    if(exists){
-      alert('用户名已存在，请换一个');
-      return;
-    }
-  }
-
   // 更新账号信息
   accts[0].name = newName;
-  accts[0].user = newUser;
   if(newPass){
     accts[0].pass = newPass;
   }
@@ -685,7 +720,6 @@ function saveAdminInfo(){
   // 更新当前登录用户信息
   if(currentUser){
     currentUser.name = newName;
-    currentUser.user = newUser;
     if(newPass){
       currentUser.pass = newPass;
     }
@@ -696,76 +730,158 @@ function saveAdminInfo(){
   }
 
   alert('管理员信息已保存！' + (newPass ? '\n密码已修改，下次登录请使用新密码。' : ''));
-  addLog('修改管理员信息', '管理员名称：' + newName + '，用户名：' + newUser);
+  addLog('修改管理员信息', '管理员名称：' + newName);
 }
 
-function saveVillageRename(){
-  const oldName = document.getElementById('rename-village-select').value;
-  const newName = document.getElementById('rename-village-new').value.trim();
+/* ==================== 村名管理 ==================== */
+function renderVillageList(){
+  var container = document.getElementById('village-mgmt-list');
+  if(!container) return;
+  var records = MR();
+  // 统计各村记录数
+  var countMap = {};
+  VILLAGES.forEach(function(v){ countMap[v] = 0; });
+  records.forEach(function(r){
+    if(countMap[r.village] !== undefined) countMap[r.village]++;
+  });
 
-  if(!oldName){
-    alert('请选择要修改的村');
-    return;
+  var html = '';
+  VILLAGES.forEach(function(v, i){
+    var cnt = countMap[v] || 0;
+    html += '<div class="vm-row" id="vm-row-' + i + '">';
+    html += '  <div class="vm-name-wrap">';
+    html += '    <span class="vm-name-display" id="vm-name-' + i + '">' + v + '</span>';
+    html += '    <input class="vm-name-input" id="vm-input-' + i + '" value="' + v + '" style="display:none">';
+    html += '  </div>';
+    html += '  <span class="vm-count"' + (cnt > 0 ? ' title="该村有' + cnt + '条隐患记录"' : '') + '>' + cnt + '条记录</span>';
+    html += '  <div class="vm-actions" id="vm-actions-view-' + i + '">';
+    html += '    <button class="btn btn-sm vm-btn-edit" onclick="startEditVillage(' + i + ')">✏️ 编辑</button>';
+    html += '    <button class="btn btn-sm vm-btn-del" onclick="deleteVillage(' + i + ')">🗑 删除</button>';
+    html += '  </div>';
+    html += '  <div class="vm-actions" id="vm-actions-edit-' + i + '" style="display:none">';
+    html += '    <button class="btn btn-sm btn-primary" onclick="saveEditVillage(' + i + ')">保存</button>';
+    html += '    <button class="btn btn-sm" onclick="cancelEditVillage(' + i + ')">取消</button>';
+    html += '  </div>';
+    html += '</div>';
+  });
+
+  if(VILLAGES.length === 0){
+    html = '<div style="text-align:center;padding:16px;color:#aaa;font-size:13px">暂无村名，请在上方添加</div>';
   }
+
+  container.innerHTML = html;
+}
+
+function startEditVillage(idx){
+  document.getElementById('vm-name-' + idx).style.display = 'none';
+  document.getElementById('vm-input-' + idx).style.display = '';
+  document.getElementById('vm-input-' + idx).focus();
+  document.getElementById('vm-input-' + idx).select();
+  document.getElementById('vm-actions-view-' + idx).style.display = 'none';
+  document.getElementById('vm-actions-edit-' + idx).style.display = '';
+
+  // Enter 保存
+  document.getElementById('vm-input-' + idx).onkeydown = function(e){
+    if(e.key === 'Enter') saveEditVillage(idx);
+    if(e.key === 'Escape') cancelEditVillage(idx);
+  };
+}
+
+function saveEditVillage(idx){
+  var oldName = VILLAGES[idx];
+  var newName = document.getElementById('vm-input-' + idx).value.trim();
+
   if(!newName){
-    alert('请输入新的村名');
+    alert('村名不能为空');
     return;
   }
   if(oldName === newName){
-    alert('新名称与旧名称相同');
+    cancelEditVillage(idx);
+    return;
+  }
+  if(VILLAGES.indexOf(newName) !== -1){
+    alert('村名 "' + newName + '" 已存在');
     return;
   }
 
-  if(!confirm('确定将 "' + oldName + '" 改为 "' + newName + '"？\n这将会更新所有相关记录。')){
+  if(!confirm('确定将 "' + oldName + '" 改为 "' + newName + '"？\n所有相关记录的村名都会被更新。')){
     return;
   }
 
-  // 更新 VILLAGES 数组
-  const idx = VILLAGES.indexOf(oldName);
-  if(idx === -1){
-    alert('找不到该村');
-    return;
-  }
-
-  // 检查新名称是否已存在
-  if(VILLAGES.includes(newName)){
-    alert('新名称已存在');
-    return;
-  }
-
+  // 更新 VILLAGES
   VILLAGES[idx] = newName;
-
-  // 保存到 localStorage
   LS('hz_villages', VILLAGES);
 
-  // 更新所有记录中的村名
-  const records = MR();
-  let updatedCount = 0;
-  records.forEach(r => {
-    if(r.village === oldName){
-      r.village = newName;
-      updatedCount++;
-    }
+  // 更新记录
+  var records = MR();
+  var updatedCount = 0;
+  records.forEach(function(r){
+    if(r.village === oldName){ r.village = newName; updatedCount++; }
   });
   MS(records);
 
-  // 更新账号中的村名（如果有）
-  const accts = MA();
-  accts.forEach(a => {
-    if(a.village === oldName){
-      a.village = newName;
-    }
+  // 更新账号
+  var accts = MA();
+  accts.forEach(function(a){
+    if(a.village === oldName) a.village = newName;
   });
   MAP(accts);
 
-  // 刷新下拉框
-  loadAdminInfo();
-
-  // 刷新界面
+  renderVillageList();
+  if(updatedCount > 0) addLog('修改村名', oldName + ' → ' + newName + '，更新' + updatedCount + '条记录');
   buildUI();
+}
 
-  alert('村名已修改！\n共更新 ' + updatedCount + ' 条记录。');
-  addLog('修改村名', oldName + ' -> ' + newName + '，更新' + updatedCount + '条记录');
+function cancelEditVillage(idx){
+  document.getElementById('vm-input-' + idx).value = VILLAGES[idx];
+  document.getElementById('vm-name-' + idx).style.display = '';
+  document.getElementById('vm-input-' + idx).style.display = 'none';
+  document.getElementById('vm-actions-view-' + idx).style.display = '';
+  document.getElementById('vm-actions-edit-' + idx).style.display = 'none';
+}
+
+function addVillage(){
+  var input = document.getElementById('new-village-input');
+  var name = input.value.trim();
+  if(!name){
+    alert('请输入村名');
+    return;
+  }
+  if(VILLAGES.indexOf(name) !== -1){
+    alert('村名 "' + name + '" 已存在');
+    return;
+  }
+
+  VILLAGES.push(name);
+  LS('hz_villages', VILLAGES);
+  input.value = '';
+  renderVillageList();
+  addLog('添加村名', '新增加村庄：' + name);
+  buildUI();
+}
+
+function deleteVillage(idx){
+  var name = VILLAGES[idx];
+  var records = MR();
+  var related = records.filter(function(r){ return r.village === name; });
+
+  var warnMsg = '确定要删除村庄 "' + name + '" 吗？';
+  if(related.length > 0){
+    warnMsg += '\n\n⚠️ 该村有 ' + related.length + ' 条隐患记录！';
+    warnMsg += '\n删除村名后这些记录仍会保留，但村名将变为"' + name + '"（已不在此村庄列表中）。';
+    warnMsg += '\n建议先将这些记录转移或删除后再操作。';
+    warnMsg += '\n\n是否仍要删除？（删除后不会删除关联记录）';
+  } else {
+    warnMsg += '\n\n此操作不可恢复。';
+  }
+
+  if(!confirm(warnMsg)) return;
+
+  VILLAGES.splice(idx, 1);
+  LS('hz_villages', VILLAGES);
+  renderVillageList();
+  addLog('删除村名', '已删除村庄：' + name + (related.length > 0 ? '（原有' + related.length + '条记录）' : ''));
+  buildUI();
 }
 
 /* ==================== 构建界面 ==================== */
@@ -783,7 +899,6 @@ function buildUI(){
   const navItems = [
     {id:'dashboard',txt:'概览'},
     {id:'list',txt:'隐患台账'},
-    {id:'stats',txt:'统计'},
     {id:'logs',txt:'日志'},
     {id:'settings',txt:'设置'},
   ];
@@ -838,9 +953,6 @@ function buildUI(){
           <button class="btn btn-sm" onclick="switchPage('list')" style="padding:12px 24px;font-size:14px">
             📋 查看台账
           </button>
-          <button class="btn btn-sm" onclick="switchPage('stats')" style="padding:12px 24px;font-size:14px">
-            📈 统计报表
-          </button>
         </div>
       `;
       dashboardPage.appendChild(quickActions);
@@ -866,6 +978,9 @@ function buildUI(){
     };
     userInfo.insertBefore(btn, userInfo.firstChild);
   }, 1000);
+
+  // 统计页图表点击事件委托（解决 SVG innerHTML 场景下 onclick 不生效的问题）
+  setupStatsClickDelegation();
 }
 
 /* ==================== 底部导航（移动端） ==================== */
@@ -877,7 +992,7 @@ function buildBottomNav(){
   const items = [
     {id:'dashboard', icon:'📊', text:'概览'},
     {id:'list', icon:'📋', text:'台账'},
-    {id:'stats', icon:'📈', text:'统计'},
+    {id:'logs', icon:'📝', text:'日志'},
     {id:'settings', icon:'⚙️', text:'设置'}
   ];
 
@@ -951,29 +1066,66 @@ function loadData(isTown){
 function fn_renderDashboard(){
   const records = MR();
   const total = records.length;
+  const pending = records.filter(r=>r.status==='待审核').length;
   const lv1 = records.filter(r=>r.level===1).length;
   const proc = records.filter(r=>r.status==='处置中').length;
   const done = records.filter(r=>r.status==='已销号').length;
   document.getElementById('stats-grid').innerHTML = [
     `<div class="stat-card" onclick="goToFilteredList({})"><div class="label">隐患总数</div><div class="value" style="color:#4a3fb5">${total}</div><div style="font-size:10px;color:#aaa">累计上报</div></div>`,
     `<div class="stat-card" onclick="goToFilteredList({level:'1'})"><div class="label">一级（重大）</div><div class="value" style="color:#dc2626">${lv1}</div><div style="font-size:10px;color:#aaa">需立即处置</div></div>`,
+    `<div class="stat-card" onclick="goToFilteredList({status:'待审核'})"><div class="label">待审核</div><div class="value" style="color:#6b6b80">${pending}</div><div style="font-size:10px;color:#aaa">等待镇审核</div></div>`,
     `<div class="stat-card" onclick="goToFilteredList({status:'处置中'})"><div class="label">处置中</div><div class="value" style="color:#d97706">${proc}</div><div style="font-size:10px;color:#aaa">正在整改</div></div>`,
     `<div class="stat-card" onclick="goToFilteredList({status:'已销号'})"><div class="label">已销号</div><div class="value" style="color:#16a34a">${done}</div><div style="font-size:10px;color:#aaa">完成处置</div></div>`,
   ].join('');
 
-  // 村进度
-  let bars='';
-  const vs = getVillages();
-  vs.forEach(v=>{
-    const vr = records.filter(r=>r.village===v);
-    if(!vr.length) return;
-    const dc = vr.filter(r=>r.status==='已销号').length;
-    const pct = Math.round(dc/vr.length*100);
-    bars+=`<div class="v-bar" onclick="goToFilteredList({village:'${v}'})"><div class="vn">${v}</div><div class="vp">${vr.length}件 / ${dc}件销号</div><div class="pt"><div class="pf" style="width:${pct}%;background:${pct>=80?'#16a34a':pct>=40?'#4a3fb5':'#dc2626'}"></div></div></div>`;
-  });
-  document.getElementById('village-bars').innerHTML=bars||'<div style="color:#aaa;font-size:12px">暂无数据</div>';
+  // 隐患类型分布 - 饼图
+  var tc = {};
+  records.forEach(function(r){ tc[r.type] = (tc[r.type]||0)+1; });
+  var typeColors = ['#4a3fb5','#2563eb','#d97706','#dc2626','#16a34a','#6d28d9','#0891b2','#ca8a04'];
+  var typeData = Object.entries(tc).sort(function(a,b){ return b[1]-a[1]; }).map(function(e){ return {label:e[0], value:e[1]}; });
+  document.getElementById('db-chart-type').innerHTML = makePieSVG(typeData, typeColors, 180);
 
-  // 最近
+  // 隐患等级分布 - 环形图
+  var lc = {1:0, 2:0, 3:0};
+  records.forEach(function(r){ if(r.level) lc[r.level]++; });
+  var levelColors = ['#dc2626','#d97706','#16a34a'];
+  var levelData = [{label:'一级（重大）', value:lc[1]},{label:'二级（较大）', value:lc[2]},{label:'三级（一般）', value:lc[3]}];
+  document.getElementById('db-chart-level').innerHTML = makeDoughnutSVG(levelData, levelColors, 180, '已定级');
+
+  // 处置状态分布 - 环形图
+  var sc = {};
+  records.forEach(function(r){ sc[r.status] = (sc[r.status]||0)+1; });
+  var statusColorMap = {'待审核':'#8b8ba0','处置中':'#d97706','待验收':'#2563eb','已销号':'#16a34a'};
+  var statusOrder = ['待审核','处置中','待验收','已销号'];
+  var statusData = Object.entries(sc).map(function(e){ return {label:e[0], value:e[1]}; });
+  statusData.sort(function(a,b){ return statusOrder.indexOf(a.label) - statusOrder.indexOf(b.label); });
+  var statusColors = statusData.map(function(d){ return statusColorMap[d.label] || '#6d28d9'; });
+  document.getElementById('db-chart-status').innerHTML = makeDoughnutSVG(statusData, statusColors, 180, '隐患总数');
+
+  // 各村隐患数量 - 水平柱状图
+  var vc = {};
+  records.forEach(function(r){ vc[r.village] = (vc[r.village]||0)+1; });
+  var villageColorsArr = ['#4a3fb5','#2563eb','#d97706','#dc2626','#16a34a','#6d28d9','#0891b2','#ca8a04','#9333ea','#059669','#be185d'];
+  var villageCountData = getVillages().map(function(v, i){
+    return {label:v, value:vc[v]||0, color:villageColorsArr[i % villageColorsArr.length]};
+  }).filter(function(d){ return d.value > 0; }).sort(function(a,b){ return b.value-a.value; });
+  document.getElementById('db-chart-village-count').innerHTML = makeBarChartH(villageCountData);
+
+  // 各村处置进度 - 表格
+  document.getElementById('db-chart-village').innerHTML = makeVillageProgressChart(getVillages(), records);
+
+  // 超期未处置
+  var today = new Date();
+  var od = records.filter(function(r){
+    if(r.status==='已销号'||!r.created) return false;
+    return (today-new Date(r.created))/(1000*60*60*24)>30;
+  });
+  document.getElementById('db-overdue-list').innerHTML = od.length ?
+    '<div style="overflow-x:auto"><table><thead><tr><th>编号</th><th>村</th><th>地点</th><th>日期</th><th>天数</th><th>等级</th><th>状态</th></tr></thead><tbody>'+
+    od.map(function(r){ var d=Math.round((today-new Date(r.created))/(1000*60*60*24)); return '<tr class="overdue-row" onclick="switchPage(\'list\');viewRecord(\''+r.id+'\')"><td class="id-cell">'+r.id+'</td><td>'+r.village+'</td><td>'+r.loc+'</td><td>'+r.date+'</td><td style="color:#dc2626;font-weight:600">'+d+'天</td><td>'+(r.level?'<span class="badge '+LEVEL_C[r.level]+'">'+LEVEL_T[r.level]+'</span>':'-')+'</td><td><span class="badge '+STATUS_C[r.status]+'">'+r.status+'</span></td></tr>' }).join('')+
+    '</tbody></table></div>' : '<div style="padding:14px;color:#888;font-size:13px">暂无超期未处置隐患</div>';
+
+  // 近期隐患
   const recent = records.filter(r=>r.status!=='已销号').sort((a,b)=>b.created.localeCompare(a.created)).slice(0,8);
   document.getElementById('recent-body').innerHTML = recent.map(r=>`
     <tr style="cursor:pointer" onclick="viewRecord('${r.id}')">
@@ -1183,8 +1335,8 @@ function makePieSVG(data, colors, size){
     var largeArc = slice > Math.PI ? 1 : 0;
     var color = colors[i % colors.length];
     var pct = Math.round(d.value/total*100);
-    paths += '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+color+'" stroke="#fff" stroke-width="2" opacity="0.88"><title>'+d.label+': '+d.value+'件 ('+pct+'%)</title></path>';
-    legends += '<div class="chart-legend-item"><span class="chart-legend-dot" style="background:'+color+'"></span><span>'+d.label+'</span><span class="chart-legend-num">'+d.value+'件 ('+pct+'%)</span></div>';
+    paths += '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+color+'" stroke="#fff" stroke-width="2" opacity="0.88" data-type="'+d.label+'"><title>'+d.label+': '+d.value+'件 ('+pct+'%) — 点击可进入台账查看</title></path>';
+    legends += '<div class="chart-legend-item ck-link" data-type="'+d.label+'" style="cursor:pointer"><span class="chart-legend-dot" style="background:'+color+'"></span><span>'+d.label+'</span><span class="chart-legend-num">'+d.value+'件 ('+pct+'%)</span></div>';
   });
   return '<div class="chart-flex"><svg class="chart-svg" width="'+size+'" height="'+size+'">'+paths+'</svg><div class="chart-legend">'+legends+'</div></div>';
 }
@@ -1215,8 +1367,8 @@ function makeDoughnutSVG(data, colors, size, centerLabel){
     var yi2 = cy + ir * Math.sin(angle);
     var color = colors[i % colors.length];
     var pct = Math.round(d.value/total*100);
-    paths += '<path d="M'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' L'+xi2.toFixed(2)+','+yi2.toFixed(2)+' A'+ir+','+ir+' 0 '+largeArc+' 0 '+xi1.toFixed(2)+','+yi1.toFixed(2)+' Z" fill="'+color+'" stroke="#fff" stroke-width="2" opacity="0.88"><title>'+d.label+': '+d.value+'件 ('+pct+'%)</title></path>';
-    legends += '<div class="chart-legend-item"><span class="chart-legend-dot" style="background:'+color+'"></span><span>'+d.label+'</span><span class="chart-legend-num">'+d.value+'件 ('+pct+'%)</span></div>';
+    paths += '<path d="M'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+largeArc+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' L'+xi2.toFixed(2)+','+yi2.toFixed(2)+' A'+ir+','+ir+' 0 '+largeArc+' 0 '+xi1.toFixed(2)+','+yi1.toFixed(2)+' Z" fill="'+color+'" stroke="#fff" stroke-width="2" opacity="0.88" data-label="'+d.label+'"><title>'+d.label+': '+d.value+'件 ('+pct+'%) — 点击可进入台账查看</title></path>';
+    legends += '<div class="chart-legend-item ck-link" data-label="'+d.label+'" style="cursor:pointer"><span class="chart-legend-dot" style="background:'+color+'"></span><span>'+d.label+'</span><span class="chart-legend-num">'+d.value+'件 ('+pct+'%)</span></div>';
   });
   // 中心文字
   paths += '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="26" font-weight="700" fill="#333">'+total+'</text>';
@@ -1233,7 +1385,7 @@ function makeBarChartH(data){
   data.forEach(function(d){
     var w = maxVal > 0 ? Math.round(d.value/maxVal*100) : 0;
     var color = d.color || '#4a3fb5';
-    html += '<div class="chart-bar-row">';
+    html += '<div class="chart-bar-row ck-link-row" onclick="goToFilteredList({village:\''+d.label+'\'})">';
     html += '<div class="chart-bar-label" title="'+d.label+'">'+d.label+'</div>';
     html += '<div class="chart-bar-track"><div class="chart-bar-fill" style="width:'+w+'%;background:'+color+'">'+(d.value>0?d.value:'')+'</div></div>';
     html += '<div class="chart-bar-pct">'+d.value+'</div>';
@@ -1256,7 +1408,7 @@ function makeVillageProgressChart(villages, records){
   var html = '<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;padding:6px 8px">村</th><th style="text-align:center;padding:6px 8px">上报</th><th style="text-align:center;padding:6px 8px">销号</th><th style="text-align:center;padding:6px 8px">处置率</th><th style="padding:6px 8px;width:40%">进度条</th></tr></thead><tbody>';
   data.forEach(function(d){
     var barColor = d.pct >= 80 ? '#16a34a' : (d.pct >= 50 ? '#4a3fb5' : '#dc2626');
-    html += '<tr>';
+    html += '<tr class="ck-link-row" onclick="goToFilteredList({village:\''+d.village+'\'})">';
     html += '<td style="padding:6px 8px;font-weight:500">'+d.village+'</td>';
     html += '<td style="text-align:center;padding:6px 8px">'+d.total+'</td>';
     html += '<td style="text-align:center;padding:6px 8px">'+d.done+'</td>';
@@ -1305,14 +1457,14 @@ function fn_renderStats(){
   // 3. 处置状态分布 - 环形图
   var sc = {};
   records.forEach(function(r){ sc[r.status] = (sc[r.status]||0)+1; });
-  var statusColorMap = {'处置中':'#d97706','待验收':'#2563eb','已销号':'#16a34a'};
+  var statusColorMap = {'待审核':'#8b8ba0','处置中':'#d97706','待验收':'#2563eb','已销号':'#16a34a'};
   var statusColors = [];
   var statusData = Object.entries(sc).map(function(e){
     statusColors.push(statusColorMap[e[0]] || '#6d28d9');
     return {label:e[0], value:e[1]};
   });
   // 按固定顺序排序
-  var statusOrder = ['处置中','待验收','已销号'];
+  var statusOrder = ['待审核','处置中','待验收','已销号'];
   statusData.sort(function(a,b){ return statusOrder.indexOf(a.label) - statusOrder.indexOf(b.label); });
   statusColors = statusData.map(function(d){ return statusColorMap[d.label] || '#6d28d9'; });
   document.getElementById('chart-status').innerHTML = makeDoughnutSVG(statusData, statusColors, 180, '隐患总数');
@@ -1337,20 +1489,49 @@ function fn_renderStats(){
   });
   document.getElementById('overdue-list').innerHTML = od.length ?
     '<div style="overflow-x:auto"><table><thead><tr><th>编号</th><th>村</th><th>地点</th><th>日期</th><th>天数</th><th>等级</th><th>状态</th></tr></thead><tbody>'+
-    od.map(function(r){ var d=Math.round((today-new Date(r.created))/(1000*60*60*24)); return '<tr><td class="id-cell">'+r.id+'</td><td>'+r.village+'</td><td>'+r.loc+'</td><td>'+r.date+'</td><td style="color:#dc2626;font-weight:600">'+d+'天</td><td>'+(r.level?'<span class="badge '+LEVEL_C[r.level]+'">'+LEVEL_T[r.level]+'</span>':'-')+'</td><td><span class="badge '+STATUS_C[r.status]+'">'+r.status+'</span></td></tr>' }).join('')+
+    od.map(function(r){ var d=Math.round((today-new Date(r.created))/(1000*60*60*24)); return '<tr class="overdue-row" onclick="switchPage(\'list\');viewRecord(\''+r.id+'\')"><td class="id-cell">'+r.id+'</td><td>'+r.village+'</td><td>'+r.loc+'</td><td>'+r.date+'</td><td style="color:#dc2626;font-weight:600">'+d+'天</td><td>'+(r.level?'<span class="badge '+LEVEL_C[r.level]+'">'+LEVEL_T[r.level]+'</span>':'-')+'</td><td><span class="badge '+STATUS_C[r.status]+'">'+r.status+'</span></td></tr>' }).join('')+
     '</tbody></table></div>' : '<div style="padding:14px;color:#888;font-size:13px">暂无超期未处置隐患</div>';
 }
 
 // 统计页面快捷筛选
 function fn_applyFilterStatus(status){
-  switchPage('list');
-  var el = document.getElementById('f-status');
-  if(el){ el.value = status; fn_applyFilter(); }
+  goToFilteredList({status:status});
 }
 function fn_applyFilterLevel(level){
-  switchPage('list');
-  var el = document.getElementById('f-level');
-  if(el){ el.value = String(level); fn_applyFilter(); }
+  goToFilteredList({level:String(level)});
+}
+
+// 环形图点击导航（自动判断等级/状态）
+function goToDoughnutItem(label){
+  if(label.indexOf('级')>=0){
+    if(label.indexOf('一级')>=0) goToFilteredList({level:'1'});
+    else if(label.indexOf('二级')>=0) goToFilteredList({level:'2'});
+    else if(label.indexOf('三级')>=0) goToFilteredList({level:'3'});
+  } else {
+    goToFilteredList({status:label});
+  }
+}
+
+// 统计页图表点击事件委托（替代 SVG inline onclick，解决 innerHTML 场景下 SVG 事件不生效的问题）
+function setupStatsClickDelegation(){
+  var containers = ['chart-type','chart-level','chart-status','db-chart-type','db-chart-level','db-chart-status'];
+  containers.forEach(function(id){
+    var ct = document.getElementById(id);
+    if(ct && !ct._delegated){
+      ct._delegated = true;
+      ct.addEventListener('click', function(e){
+        var elData = e.target.closest('[data-type]');
+        if(elData){
+          goToFilteredList({type: elData.getAttribute('data-type')});
+          return;
+        }
+        var elLabel = e.target.closest('[data-label]');
+        if(elLabel){
+          goToDoughnutItem(elLabel.getAttribute('data-label'));
+        }
+      });
+    }
+  });
 }
 
 /* ==================== 照片处理 ==================== */
@@ -1413,7 +1594,7 @@ function openAdd(){
   });
   renderPhotoThumbs();
   document.getElementById('m-level').value=3;
-  document.getElementById('m-status').value='处置中';
+  document.getElementById('m-status').value='待审核';
   M.open('addModal');
   
   // 移动端优化：滚动到顶部
@@ -1426,13 +1607,13 @@ function openEdit(id){
   const r = MR().find(x=>x.id===id);
   if(!r) return;
   
-  // 检查权限：镇管理员可以编辑所有，村用户只能编辑自己的且状态为处置中
+  // 检查权限：镇管理员可以编辑所有，村用户只能编辑自己的且状态为待审核或处置中
   if(currentUser.role!=='town'){
     if(r.village !== currentUser.village){
       alert('只能编辑本村的上报'); 
       return; 
     }
-    if(r.status !== '处置中'){
+    if(r.status !== '待审核' && r.status !== '处置中'){
       alert('只能编辑处置中的上报'); 
       return; 
     }
@@ -1468,7 +1649,7 @@ function openEdit(id){
     document.getElementById('m-dept').value=r.dept||'';
     document.getElementById('m-owner').value=r.owner||'';
     document.getElementById('m-opinion').value=r.opinion||'';
-    document.getElementById('m-status').value=r.status||'处置中';
+    document.getElementById('m-status').value=r.status||'待审核';
   }
   
   M.open('addModal');
@@ -1507,7 +1688,7 @@ function saveRecord(){
     v.id = genId(records);
     v.created = v.date;
     v.level = v.level || null;
-    v.status = v.status || '处置中';
+    v.status = v.status || '待审核';
     v.photos = pendingPhotos.length ? [...pendingPhotos] : [];
     records.unshift(v);
     MS(records);
@@ -1563,6 +1744,7 @@ function viewRecord(id){
   }
   const tl = [{t:r.created,e:r.village+'上报隐患，上报人：'+r.reporter}];
   if(r.level) tl.push({t:r.date,e:`定级为：<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>，分配至 ${r.dept||'相关部门'}`});
+  if(r.status==='待审核') tl.push({t:r.date,e:'隐患已上报，等待镇管理人员审核'});
   if(r.status==='处置中') tl.push({t:r.deadline||'进行中',e:'隐患处置中'});
   if(r.status==='待验收') tl.push({t:r.deadline||'-',e:'处置完成，等待验收销号'});
   if(r.status==='已销号') tl.push({t:r.deadline||'-',e:'验收通过，正式销号'});
@@ -1592,8 +1774,52 @@ function viewRecord(id){
 function renderLogs(){
   const logs = ML();
   document.getElementById('logs-content').innerHTML = logs.length ?
-    logs.map(l=>`<div class="log-line"><span class="lt">${l.time}</span><span class="lu">${l.user}</span><span class="la">${l.action}</span> ${l.detail}</div>`).join('')
+    logs.map((l,i)=>`<div class="log-line"><span class="lt">${l.time}</span><span class="lu">${l.user}</span><span class="la">${l.action}</span><span class="ld">${l.detail}</span><button class="btn-del-log" onclick="deleteLog(${i})">删除</button></div>`).join('')
     : '<div style="padding:14px;color:#aaa;font-size:12px">暂无操作记录</div>';
+}
+
+function deleteLog(idx){
+  if(!confirm('确定要删除这条日志记录吗？')) return;
+  const logs = ML();
+  logs.splice(idx,1);
+  MLP(logs);
+  renderLogs();
+}
+
+function clearAllLogs(){
+  const logs = ML();
+  if(logs.length===0){ alert('暂无日志可删除'); return; }
+  if(!confirm('确定要删除全部 ' + logs.length + ' 条日志记录吗？\n\n此操作不可撤销！')) return;
+  if(!confirm('再次确认：删除后将无法恢复，是否继续？')) return;
+  MLP([]);
+  renderLogs();
+}
+
+function exportLogs(format){
+  const logs = ML();
+  if(logs.length===0){ alert('暂无日志可导出'); return; }
+  if(format==='csv'){
+    // CSV 导出（处理中文兼容 Excel）
+    var headers = ['时间','操作用户','操作类型','详情'];
+    var rows = logs.map(function(l){ return [l.time,l.user,l.action,l.detail]; });
+    var bom = '\uFEFF';
+    var csv = bom + headers.join(',') + '\n';
+    csv += rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '操作日志_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+  } else {
+    // JSON 导出
+    var json = JSON.stringify(logs, null, 2);
+    var blob = new Blob([json], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '操作日志_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+  }
+  addLog('导出日志', '已导出' + logs.length + '条日志（' + format.toUpperCase() + '格式）');
 }
 
 
@@ -1668,8 +1894,8 @@ function restoreData(e){
 function downloadTemplate(){
   var headers = ['编号','上报日期','所在村','隐患类型','隐患地点','隐患描述','上报人','联系电话','安全等级','整改期限','责任单位','责任人','处置意见','状态'];
   var sample = [
-    ['','2026-07-01','梅林村','道路损毁','梅林村3组弯道处','路面塌陷约2平米，影响通行','张三','13800138000','一级（重大）','2026-07-15','梅林村委会','李四','设置警示标志并修复路面','处置中'],
-    ['','2026-07-01','桂花村','标志缺失','桂花村主干道交叉口','交通标志牌缺失','王五','13900139000','二级（较大）','2026-07-20','桂花村委会','赵六','补装警示标志','处置中']
+    ['','2026-07-01','梅林村','道路损毁','梅林村3组弯道处','路面塌陷约2平米，影响通行','张三','13800138000','一级（重大）','2026-07-15','梅林村委会','李四','设置警示标志并修复路面','待审核'],
+    ['','2026-07-01','桂花村','标志缺失','桂花村主干道交叉口','交通标志牌缺失','王五','13900139000','二级（较大）','2026-07-20','桂花村委会','赵六','补装警示标志','待审核']
   ];
   var ws_data = [headers].concat(sample);
   var ws = XLSX.utils.aoa_to_sheet(ws_data);
@@ -1829,7 +2055,7 @@ function importRecords(e){
         if(statusStr && STATUS_C[statusStr]){
           rec.status = statusStr;
         } else {
-          rec.status = '处置中';
+          rec.status = '待审核';
         }
 
         rec.created = rec.date;
@@ -2031,6 +2257,9 @@ window.clearSelection = clearSelection;
 window.batchDelete = batchDelete;
 window.fn_applyFilterStatus = fn_applyFilterStatus;
 window.fn_applyFilterLevel = fn_applyFilterLevel;
+window.goToFilteredList = goToFilteredList;
+window.goToDoughnutItem = goToDoughnutItem;
+window.setupStatsClickDelegation = setupStatsClickDelegation;
 window.downloadTemplate = downloadTemplate;
 window.importRecords = importRecords;
 </script>
