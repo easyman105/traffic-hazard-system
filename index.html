@@ -1023,7 +1023,7 @@ function fn_renderList(){
   const isTown = currentUser.role==='town';
 
   document.getElementById('list-body').innerHTML = page.map(r=>`<tr style="cursor:pointer" onclick="viewRecord('${r.id}')">
-    <td onclick="event.stopPropagation()"><input type="checkbox" class="row-cb" value="${r.id}" onchange="updateBatchUI()"></td>
+    <td onclick="event.stopPropagation()"><input type="checkbox" class="row-cb" value="${r.id}" onclick="updateBatchUI()" onchange="updateBatchUI()"></td>
     <td class="id-cell">${r.id}</td><td>${r.date}</td><td>${r.village}</td><td>${r.type}</td>
     <td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.loc}">${r.loc}</td>
     <td>${r.level?`<span class="badge ${LEVEL_C[r.level]}">${LEVEL_T[r.level]}</span>`:'<span style="color:#aaa;font-size:11px">待定级</span>'}</td>
@@ -1143,8 +1143,9 @@ function batchDelete(){
   msg3 += '点击"取消"可中止操作。';
   if(!confirm(msg3)) return;
 
-  // Execute deletion
-  var remaining = records.filter(function(r){ return !selectedIds.has(r.id); });
+  // Execute deletion — use ids (consistent with what was shown in confirmation dialogs)
+  var idSet = new Set(ids);
+  var remaining = records.filter(function(r){ return !idSet.has(r.id); });
   MS(remaining);
 
   // Log
