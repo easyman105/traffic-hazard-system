@@ -527,13 +527,13 @@ tr:hover td{background:#fafafe}
     <div class="card sync-card" style="margin-top:16px">
       <h4>☁️ 数据云同步</h4>
       <div class="sync-desc">
-        通过 <b>GitHub Gist</b> 实现 PC 和手机之间数据同步。首次使用需：
-        <br>1. 在 <a href="https://github.com/settings/tokens" target="_blank">GitHub Token 设置</a> 创建一个 Personal Access Token（勾选 <code>gist</code> 权限）
-        <br>2. 将 Token 粘贴到下方并保存
+        通过 <b>GitHub Gist</b> 实现 PC 和手机之间自动数据同步。
+        <br>系统已内置云同步 Token，登录即自动下载最新数据。
+        <br>如需更换 Token，请在下方输入新的并保存。
       </div>
-      <div class="sync-row">
-        <input type="password" id="sync-token" placeholder="粘贴 GitHub Token（ghp_xxx...），已保存则自动填充">
-        <button class="btn-sync primary" onclick="saveSyncToken()">💾 保存 Token</button>
+      <div class="sync-row" id="sync-token-row">
+        <input type="password" id="sync-token" placeholder="更换 GitHub Token（ghp_xxx...），留空使用系统 Token">
+        <button class="btn-sync primary" onclick="saveSyncToken()">💾 保存</button>
         <button class="btn-sync warn" onclick="clearSyncToken()">清除</button>
       </div>
       <div class="sync-status-row" id="sync-status-row" style="display:none">
@@ -723,19 +723,27 @@ function doLogin(){
     initAccounts();
     initRecords();
 
-    // 手机端：登录后自动从云端同步最新数据
-    if(isMobile() && getSyncToken() && getSyncGistId()){
+    // 所有设备：登录后自动从云端同步最新数据（Token 硬编码在系统中）
+    if(getSyncToken()){
       showLoginLoading('正在从云端同步最新数据...');
-      silentSyncDownload(function(success, data){
-        if(success){
-          addLog('自动云同步', '手机端登录后自动同步 ' + data.records.length + ' 条记录');
-        }
-        // 无论成功与否，都继续进入系统
-        document.getElementById('login-page').style.display='none';
-        document.getElementById('app').style.display='';
-        buildUI();
-      });
+      var gid = getSyncGistId();
+      if(!gid){
+        // 新设备无 Gist ID → 先用 Token 自动发现
+        discoverGistLogin(function(success){
+          if(success){ silentSyncDownload(loginAfterSync); }
+          else { loginAfterSync(false); }
+        });
+      } else {
+        silentSyncDownload(loginAfterSync);
+      }
     } else {
+      loginAfterSync(false);
+    }
+
+    function loginAfterSync(success, data){
+      if(success && data){
+        addLog('自动云同步', '登录后自动同步 ' + (data.records?data.records.length:0) + ' 条记录');
+      }
       document.getElementById('login-page').style.display='none';
       document.getElementById('app').style.display='';
       buildUI();
@@ -1927,7 +1935,15 @@ function changePwd(){
 var SYNC_GIST_ID_KEY = 'hz_sync_gist_id';
 var SYNC_TOKEN_KEY = 'hz_sync_token';
 
-function getSyncToken(){ return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
+// ★ 系统级 Token — 硬编码后，所有设备登录即自动云同步，无需任何额外设置
+// 获取方式：GitHub → Settings → Developer settings → Personal access tokens → Generate new token (classic)
+// 权限仅需勾选 gist，过期时间选 No expiration
+var SYSTEM_SYNC_TOKEN = '';
+
+function getSyncToken(){
+  // 优先使用本地存储，回退到系统硬编码 Token
+  return localStorage.getItem(SYNC_TOKEN_KEY) || SYSTEM_SYNC_TOKEN;
+}
 function getSyncGistId(){ return localStorage.getItem(SYNC_GIST_ID_KEY) || ''; }
 
 // 自动发现已有的云端 Gist（根据描述匹配）
@@ -1979,6 +1995,33 @@ function discoverGist(onComplete){
   });
 }
 
+// 登录时静默发现 Gist（不显示 UI 消息，供 doLogin 调用）
+function discoverGistLogin(onComplete){
+  var tok = getSyncToken();
+  if(!tok){ if(onComplete) onComplete(false); return; }
+
+  fetch('https://api.github.com/gists?per_page=100', {
+    headers: { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json' }
+  })
+  .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, data:j}; }); })
+  .then(function(res){
+    if(!res.ok){ onComplete(false); return; }
+    var found = null;
+    (res.data||[]).forEach(function(g){
+      if(g.description && g.description.indexOf('东富镇交通隐患台账') >= 0 && g.files && g.files['东富镇交通隐患数据.json']){
+        found = g;
+      }
+    });
+    if(found){
+      localStorage.setItem(SYNC_GIST_ID_KEY, found.id);
+      onComplete(true);
+    } else {
+      onComplete(false);
+    }
+  })
+  .catch(function(){ onComplete(false); });
+}
+
 function showSyncMsg(msg, type){
   var el = document.getElementById('sync-msg');
   el.className = 'sync-msg ' + type;
@@ -1987,11 +2030,19 @@ function showSyncMsg(msg, type){
 }
 
 function initSyncUI(){
-  var tok = getSyncToken();
+  var localTok = localStorage.getItem(SYNC_TOKEN_KEY);
   var gid = getSyncGistId();
-  if(tok){
-    document.getElementById('sync-token').value = tok;
-    document.getElementById('sync-token').placeholder = 'Token 已保存 ✓';
+  var hasSystemTok = !!SYSTEM_SYNC_TOKEN;
+  var hasTok = !!(localTok || hasSystemTok);
+
+  if(localTok){
+    document.getElementById('sync-token').value = localTok;
+    document.getElementById('sync-token').placeholder = 'Token 已保存 ✓（留空使用系统 Token）';
+  } else if(hasSystemTok){
+    document.getElementById('sync-token').placeholder = '使用系统内置 Token ✓（云端数据可自动同步）';
+  }
+
+  if(hasTok){
     updateSyncGistStatus(gid);
   } else {
     document.getElementById('sync-status-row').style.display = 'none';
@@ -2053,6 +2104,8 @@ function buildSyncData(){
     logs: ML(),
     villages: LS('hz_villages'),
     seeded: localStorage.getItem('hz_seeded') || '',
+    // 存储 Token — 新设备下载后自动获得，无需手动输入
+    syncToken: getSyncToken(),
   };
 }
 
@@ -2069,10 +2122,12 @@ function syncUpload(){
 
   var url, method, body;
   if(gistId){
-    // 更新已有 Gist
+    // 更新已有 Gist（同时确保为公开状态，便于新设备无 Token 读取）
     url = 'https://api.github.com/gists/' + gistId;
     method = 'PATCH';
     body = JSON.stringify({
+      description: '东富镇交通隐患台账 — 数据云同步（自动生成，勿手动编辑）',
+      public: true,
       files: { '东富镇交通隐患数据.json': { content: content } }
     });
   } else {
@@ -2081,7 +2136,7 @@ function syncUpload(){
     method = 'POST';
     body = JSON.stringify({
       description: '东富镇交通隐患台账 — 数据云同步（自动生成，勿手动编辑）',
-      public: false,
+      public: true,
       files: { '东富镇交通隐患数据.json': { content: content } }
     });
   }
@@ -2149,6 +2204,10 @@ function silentSyncDownload(callback){
     if(data.villages) LS('hz_villages', data.villages);
     if(data.seeded) localStorage.setItem('hz_seeded', data.seeded);
     if(data.records && data.records.length>0) localStorage.setItem('hz_seeded', '1');
+    // 如果云端包含 Token，自动保存到本地（新设备从此无需手动输入）
+    if(data.syncToken){
+      localStorage.setItem(SYNC_TOKEN_KEY, data.syncToken);
+    }
     callback(true, data);
   })
   .catch(function(err){ callback(false); });
@@ -2159,9 +2218,12 @@ function syncDownload(){
   var tok = getSyncToken();
   var gistId = getSyncGistId();
 
-  if(!tok){ showSyncMsg('请先保存 GitHub Token', 'err'); return; }
+  if(!tok && !gistId){
+    showSyncMsg('Token 和 Gist ID 均未配置。请在已有设备上执行一次"上传到云端"，系统会自动完成设置', 'err');
+    return;
+  }
 
-  if(!gistId){
+  if(!gistId && tok){
     // 新设备无 Gist ID → 先尝试自动发现
     showSyncMsg('正在搜索云端数据...', 'info');
     discoverGist(function(success){
@@ -2213,6 +2275,10 @@ function syncDownload(){
     if(data.villages) LS('hz_villages', data.villages);
     if(data.seeded) localStorage.setItem('hz_seeded', data.seeded);
     if(data.records && data.records.length>0) localStorage.setItem('hz_seeded', '1');
+    // 自动保存云端 Token（新设备从此无需手动输入）
+    if(data.syncToken){
+      localStorage.setItem(SYNC_TOKEN_KEY, data.syncToken);
+    }
     showSyncMsg('✅ 下载成功！' + data.records.length + ' 条记录已恢复，页面即将刷新...', 'ok');
     addLog('云同步下载', '从云端下载 ' + data.records.length + ' 条记录');
     setTimeout(function(){ location.reload(); }, 1500);
@@ -2232,6 +2298,7 @@ function backupData(){
     logs: ML(),
     villages: LS('hz_villages'),
     seeded: localStorage.getItem('hz_seeded') || '',
+    syncToken: getSyncToken(),
   };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], {type:'application/json'});
