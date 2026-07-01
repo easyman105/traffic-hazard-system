@@ -1387,7 +1387,7 @@ function makeBarChartH(data){
   data.forEach(function(d, idx){
     var w = maxVal > 0 ? Math.round(d.value/maxVal*100) : 0;
     // 按数量从高到低生成颜色梯度：最多=红色 → 最少=蓝色
-    var hue = data.length>1 ? Math.round(220 - (idx/(data.length-1))*220) : 0;
+    var hue = data.length>1 ? Math.round((idx/(data.length-1))*220) : 0;
     var color = 'hsl('+hue+', 65%, 50%)';
     html += '<div class="chart-bar-row ck-link-row" onclick="goToFilteredList({village:\''+d.label+'\'})">';
     html += '<div class="chart-bar-label" title="'+d.label+'">'+d.label+'</div>';
