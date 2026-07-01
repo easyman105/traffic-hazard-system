@@ -1851,6 +1851,7 @@ function backupData(){
     accounts: MA(),
     logs: ML(),
     villages: LS('hz_villages'),
+    seeded: localStorage.getItem('hz_seeded') || '',
   };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], {type:'application/json'});
@@ -1879,6 +1880,9 @@ function restoreData(e){
       MAP(data.accounts);
       if(data.logs) MLP(data.logs);
       if(data.villages) LS('hz_villages', data.villages);
+      // 恢复 hz_seeded 标记，防止旧备份中的种子数据导致问题
+      if(data.seeded) localStorage.setItem('hz_seeded', data.seeded);
+      if(data.records && data.records.length>0) localStorage.setItem('hz_seeded', '1');
       addLog('数据恢复', '已从备份文件恢复数据');
       alert('数据恢复成功！页面将刷新。');
       location.reload();
